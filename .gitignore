@@ -2,3 +2,5 @@
 /cache
 /out
 broadcast/
+cache-zk/
+node_modules/
