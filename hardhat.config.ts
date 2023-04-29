@@ -29,11 +29,9 @@ export default {
   },
   solidity: {
     version: '0.8.17',
-    // TODO: move args to zksolc everywhere
     settings: {
       optimizer: {
         enabled: true,
-        // will be ignored by zksolc
         runs: 1000000,
       },
       metadata: {
@@ -50,6 +48,13 @@ export default {
   zksolc: {
     version: "1.3.10",
     compilerSource: "binary",
-    settings: {},
+    settings: {
+      metadata: {
+        // do not include the metadata hash, since this is machine dependent
+        // and we want all generated code to be deterministic
+        // https://docs.soliditylang.org/en/v0.7.6/metadata.html
+        bytecodeHash: 'none',
+      },
+    },
   },
 }
