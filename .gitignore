@@ -3,4 +3,5 @@
 /out
 broadcast/
 cache-zk/
+artifacts-zk/
 node_modules/
