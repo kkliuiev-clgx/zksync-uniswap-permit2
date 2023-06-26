@@ -24,21 +24,7 @@ The `AllowanceTransfer` contract handles setting allowances on tokens, giving pe
 
 ## Integrating with Permit2
 
-Before integrating contracts can request users’ tokens through `Permit2`, users must approve the `Permit2` contract through the specific token contract. To see a detailed technical reference, visit the Uniswap [documentation site](https://docs.uniswap.org/contracts/permit2/overview).
-
-### Note on viaIR compilation
-Permit2 uses viaIR compilation, so importing and deploying it in an integration for tests will require the integrating repository to also use viaIR compilation. This is often quite slow, so can be avoided using the precompiled `DeployPermit2` utility:
-```
-import {DeployPermit2} from "permit2/test/utils/DeployPermit2.sol";
-
-contract MyTest is DeployPermit2 {
-    address permit2;
-
-    function setUp() public {
-        permit2 = deployPermit2();
-    }
-}
-```
+Before integrating contracts can request users’ tokens through `Permit2`, users must approve the `Permit2` contract through the specific token contract. To see a detailed technical reference, visit the Uniswap [documentation site](https://docs.uniswap.org/protocol/permit2/overview).
 
 ## Bug Bounty
 
@@ -90,3 +76,23 @@ forge script --broadcast --rpc-url <RPC-URL> --private-key <PRIVATE_KEY> --verif
 ## Acknowledgments
 
 Inspired by [merklejerk](https://github.com/merklejerk)'s [permit-everywhere](https://github.com/merklejerk/permit-everywhere) contracts which introduce permit based approvals for all tokens regardless of EIP2612 support.
+
+## ZK-Sync Era setup test
+1. Init submodules(solmate/openzeppelin);
+ ```sh
+git submodule init
+```
+2. Clone submodules(solmate/openzeppelin);
+```sh
+git submodule update
+```
+
+3. Install via yarn dev dependencies;
+
+```sh
+yarn install
+```
+4. Run test;
+```sh
+yarn hardhat test --network zkSyncLocalSetup
+```
