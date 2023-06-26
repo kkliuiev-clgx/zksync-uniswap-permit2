@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {ERC20} from "solmate/src/tokens/ERC20.sol";
+import {ERC20} from "../../lib/solmate/src/tokens/ERC20.sol";
 
+import {Permit2} from "../Permit2.sol";
 import {IDAIPermit} from "../interfaces/IDAIPermit.sol";
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 import {SafeCast160} from "./SafeCast160.sol";
@@ -19,12 +20,9 @@ library Permit2Lib {
     /// @dev The unique EIP-712 domain domain separator for the DAI token contract.
     bytes32 internal constant DAI_DOMAIN_SEPARATOR = 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
 
-    /// @dev The address for the WETH9 contract on Ethereum mainnet, encoded as a bytes32.
-    bytes32 internal constant WETH9_ADDRESS = 0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2;
-
     /// @dev The address of the Permit2 contract the library will use.
-    IAllowanceTransfer internal constant PERMIT2 =
-        IAllowanceTransfer(address(0x000000000022D473030F116dDEE9F6B43aC78BA3));
+    // Permit2 internal constant PERMIT2 = Permit2(address(0x000000000022D473030F116dDEE9F6B43aC78BA3));
+    Permit2 internal constant PERMIT2 = Permit2(address(0x28D81506519D32a212fB098658abf4a9CCe60d59));
 
     /// @notice Transfer a given amount of tokens from one user to another.
     /// @param token The token to transfer.
@@ -58,8 +56,7 @@ library Permit2Lib {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Permit a user to spend a given amount of
-    /// another user's tokens via native EIP-2612 permit if possible, falling
-    /// back to Permit2 if native permit fails or is not implemented on the token.
+    /// another user's tokens via the owner's EIP-712 signature.
     /// @param token The token to permit spending.
     /// @param owner The user to permit spending from.
     /// @param spender The user to permit spending to.
@@ -83,25 +80,18 @@ library Permit2Lib {
 
         bool success; // Call the token contract as normal, capturing whether it succeeded.
         bytes32 domainSeparator; // If the call succeeded, we'll capture the return value here.
-
         assembly {
-            // If the token is WETH9, we know it doesn't have a DOMAIN_SEPARATOR, and we'll skip this step.
-            // We make sure to mask the token address as its higher order bits aren't guaranteed to be clean.
-            if iszero(eq(and(token, 0xffffffffffffffffffffffffffffffffffffffff), WETH9_ADDRESS)) {
-                success :=
-                    and(
-                        // Should resolve false if its not 32 bytes or its first word is 0.
-                        and(iszero(iszero(mload(0))), eq(returndatasize(), 32)),
-                        // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
-                        // Counterintuitively, this call must be positioned second to the and() call in the
-                        // surrounding and() call or else returndatasize() will be zero during the computation.
-                        // We send a maximum of 5000 gas to prevent tokens with fallbacks from using a ton of gas.
-                        // which should be plenty to allow tokens to fetch their DOMAIN_SEPARATOR from storage, etc.
-                        staticcall(5000, token, add(inputData, 32), mload(inputData), 0, 32)
-                    )
+            success :=
+                and(
+                    // Should resolve false if its not 32 bytes or its first word is 0.
+                    and(iszero(iszero(mload(0))), eq(returndatasize(), 32)),
+                    // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
+                    // Counterintuitively, this call must be positioned second to the and() call in the
+                    // surrounding and() call or else returndatasize() will be zero during the computation.
+                    staticcall(gas(), token, add(inputData, 32), mload(inputData), 0, 32)
+                )
 
-                domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
-            }
+            domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
         }
 
         // If the call to DOMAIN_SEPARATOR succeeded, try using permit on the token.
@@ -120,46 +110,25 @@ library Permit2Lib {
         if (!success) {
             // If the initial DOMAIN_SEPARATOR call on the token failed or a
             // subsequent call to permit failed, fall back to using Permit2.
-            simplePermit2(token, owner, spender, amount, deadline, v, r, s);
-        }
-    }
 
-    /// @notice Simple unlimited permit on the Permit2 contract.
-    /// @param token The token to permit spending.
-    /// @param owner The user to permit spending from.
-    /// @param spender The user to permit spending to.
-    /// @param amount The amount to permit spending.
-    /// @param deadline  The timestamp after which the signature is no longer valid.
-    /// @param v Must produce valid secp256k1 signature from the owner along with r and s.
-    /// @param r Must produce valid secp256k1 signature from the owner along with v and s.
-    /// @param s Must produce valid secp256k1 signature from the owner along with r and v.
-    function simplePermit2(
-        ERC20 token,
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) internal {
-        (,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);
+            (,, uint48 nonce) = PERMIT2.allowance(owner, address(token), spender);
 
-        PERMIT2.permit(
-            owner,
-            IAllowanceTransfer.PermitSingle({
-                details: IAllowanceTransfer.PermitDetails({
-                    token: address(token),
-                    amount: amount.toUint160(),
-                    // Use an unlimited expiration because it most
-                    // closely mimics how a standard approval works.
-                    expiration: type(uint48).max,
-                    nonce: nonce
+            PERMIT2.permit(
+                owner,
+                IAllowanceTransfer.PermitSingle({
+                    details: IAllowanceTransfer.PermitDetails({
+                        token: address(token),
+                        amount: amount.toUint160(),
+                        // Use an unlimited expiration because it most
+                        // closely mimics how a standard approval works.
+                        expiration: type(uint48).max,
+                        nonce: nonce
+                    }),
+                    spender: spender,
+                    sigDeadline: deadline
                 }),
-                spender: spender,
-                sigDeadline: deadline
-            }),
-            bytes.concat(r, s, bytes1(v))
-        );
+                bytes.concat(r, s, bytes1(v))
+            );
+        }
     }
 }

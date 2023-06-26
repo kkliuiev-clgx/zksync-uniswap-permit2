@@ -3,8 +3,8 @@ pragma solidity 0.8.17;
 
 import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
 import {SignatureExpired, InvalidNonce} from "./PermitErrors.sol";
-import {ERC20} from "solmate/src/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
+import {ERC20} from "../lib/solmate/src/tokens/ERC20.sol";
+import {SafeTransferLib} from "../lib/solmate/src/utils/SafeTransferLib.sol";
 import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
 import {EIP712} from "./EIP712.sol";
@@ -43,6 +43,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     }
 
     /// @notice Transfers a token using a signed permit message.
+    /// @dev If to is the zero address, the tokens are sent to the spender.
     /// @param permit The permit data signed over by the owner
     /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
@@ -92,6 +93,7 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     }
 
     /// @notice Transfers tokens using a signed permit messages
+    /// @dev If to is the zero address, the tokens are sent to the spender
     /// @param permit The permit data signed over by the owner
     /// @param dataHash The EIP-712 hash of permit data to include when checking signature
     /// @param owner The owner of the tokens to transfer
