@@ -1,6 +1,7 @@
 import '@matterlabs/hardhat-zksync-deploy'
 import '@matterlabs/hardhat-zksync-solc'
 import '@matterlabs/hardhat-zksync-verify'
+import '@nomicfoundation/hardhat-toolbox'
 import { task } from 'hardhat/config'
 import deploy from './script/deploy'
 
@@ -57,4 +58,7 @@ export default {
       },
     },
   },
+  mocha: {
+    timeout: 1000000000000
+  }
 }
