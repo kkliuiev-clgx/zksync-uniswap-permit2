@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
 
-import {ERC20} from "../../lib/solmate/src/tokens/ERC20.sol";
-import {Permit2Lib} from "../../src/libraries/Permit2Lib.sol";
+import "../mock/Permit2LibWithCustomPermit2Address.sol";
+import "../interfaces/ISignatureTransfer.sol";
 
-contract MockPermit2Lib {
+
+contract MockPermit2LibTest {
     function permit2(
         ERC20 token,
         address owner,
@@ -15,11 +16,11 @@ contract MockPermit2Lib {
         bytes32 r,
         bytes32 s
     ) public {
-        Permit2Lib.permit2(token, owner, spender, amount, deadline, v, r, s);
+        Permit2LibWithCustomPermit2Address.permit2(token, owner, spender, amount, deadline, v, r, s);
     }
 
     function transferFrom2(ERC20 token, address from, address to, uint256 amount) public {
-        Permit2Lib.transferFrom2(token, from, to, amount);
+        Permit2LibWithCustomPermit2Address.transferFrom2(token, from, to, amount);
     }
 
     function testPermit2Code(ERC20 token) external view returns (bool) {

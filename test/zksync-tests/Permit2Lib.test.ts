@@ -8,7 +8,7 @@ import {
     MockPermitWithLargerDS,
     MockPermitWithSmallDS,
     Permit2,
-    MockPermit2Lib,
+    MockPermit2LibTest,
     MockNonPermitNonERC20WithDS, MockSafeERC20
 } from "../../typechain-types";
 import {deployContract, provider} from "./shared/zkSyncUtils";
@@ -57,7 +57,7 @@ describe('Permit2Lib', function () {
     let TEST_LG_DS_DOMAIN_SEPARATOR: string;
 
     let permit2: Permit2;
-    let permit2Lib: MockPermit2Lib;
+    let permit2Lib: MockPermit2LibTest;
     let token: MockERC20;
     let safeERC20: MockSafeERC20;
 
@@ -95,7 +95,7 @@ describe('Permit2Lib', function () {
         }
 
 
-        permit2Lib = <MockPermit2Lib>await deployContract("MockPermit2Lib");
+        permit2Lib = <MockPermit2LibTest>await deployContract("MockPermit2LibTest");
         safeERC20 = <MockSafeERC20>await deployContract("MockSafeERC20");
 
 
