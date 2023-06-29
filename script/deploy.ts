@@ -1,25 +1,43 @@
-import { Wallet } from 'zksync-web3'
+import { Wallet, Provider, utils } from 'zksync-web3'
 import * as ethers from 'ethers'
-import { Deployer } from '@matterlabs/hardhat-zksync-deploy'
+
+// TODO
+const SALT = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
 export default async function deploy(args: any) {
     console.log(`Running deploy script for the permit2 contract`);
 
-    const wallet = new Wallet(args.privateKey);
+    let url: URL
+    try {
+        url = new URL(args.jsonRpc)
+    } catch (error) {
+        console.error('Invalid JSON RPC URL', (error as Error).message)
+        process.exit(1)
+    }
+
+    const wallet = new Wallet(args.privateKey, new Provider({url: url.href}))
 
     const hre = require('hardhat')
-    const deployer = new Deployer(hre, wallet);
-    const artifact = await deployer.loadArtifact("Permit2");
+    const artifact = hre.artifacts.readArtifactSync('Permit2')
 
-    const deploymentFee = await deployer.estimateDeployFee(artifact, []);
+    const ABI = [
+        "function deploy(bytes32 _salt, bytes32 _bytecodehash, bytes calldata _calldata)"
+    ];
+    const iface = new ethers.utils.Interface(ABI);
+    const calldata = iface.encodeFunctionData("deploy", [SALT, utils.hashBytecode(artifact.bytecode) , []])
 
-    const parsedFee = ethers.utils.formatEther(deploymentFee.toString());
-    console.log(`The deployment is estimated to cost ${parsedFee} ETH`);
+    const factoryDeps = [artifact.bytecode]
 
-    // TODO: create2
-    const permit2 = await deployer.deploy(artifact);
+    const tx: ethers.providers.TransactionRequest = {
+        to: args.create2Factory,
 
+        data: calldata,
 
-    const contractAddress = permit2.address;
-    console.log(`${artifact.contractName} was deployed to ${contractAddress}`);
+        customData: {
+            factoryDeps,
+        },
+    }
+
+    const receipt = await(await wallet.sendTransaction(tx)).wait()
+    console.log(`Permit2 deploy transaction hash: ${receipt.transactionHash}`)
 }
