@@ -78,21 +78,27 @@ forge script --broadcast --rpc-url <RPC-URL> --private-key <PRIVATE_KEY> --verif
 Inspired by [merklejerk](https://github.com/merklejerk)'s [permit-everywhere](https://github.com/merklejerk/permit-everywhere) contracts which introduce permit based approvals for all tokens regardless of EIP2612 support.
 
 ## ZK-Sync Era setup test
-1. Init submodules(solmate/openzeppelin);
- ```sh
+
+1. Init submodules(solmate/openzeppelin)
+
+```sh
 git submodule init
 ```
-2. Clone submodules(solmate/openzeppelin);
+
+2. Clone submodules(solmate/openzeppelin)
+
 ```sh
 git submodule update
 ```
 
-3. Install via yarn dev dependencies;
+3. Install via yarn dev dependencies
 
 ```sh
 yarn install
 ```
-4. Run test;
+
+4. Run test
+
 ```sh
 yarn hardhat test --network zkSyncLocalSetup
 ```

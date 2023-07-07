@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ethers} from "ethers";
 import {deployContract, provider} from "./shared/zkSyncUtils";
-import {MockPermit2WithCustomChainID, Permit2} from "../../typechain-types";
+import {MockEIP712WithCustomChainID, Permit2} from "../../typechain-types";
 import {Wallet} from "zksync-web3";
 
 
@@ -11,19 +11,21 @@ describe("EIP712", function () {
     const NAME_HASH = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("Permit2"));
 
     let permit2: Permit2;
-    let permit2CustomChainID: MockPermit2WithCustomChainID;
-    let owner:Wallet = new Wallet('0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110', provider);
+    let EIP712WithCustomChainID: MockEIP712WithCustomChainID;
+    let owner: Wallet = new Wallet('0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110', provider);
     describe("Test Domain Separator", function () {
+
 
         beforeEach('Deploy Permit2', async () => {
             permit2 = await deployContract('Permit2') as Permit2;
-            permit2CustomChainID = await deployContract('MockPermit2WithCustomChainID') as MockPermit2WithCustomChainID;
+            EIP712WithCustomChainID = await deployContract('MockEIP712WithCustomChainID') as MockEIP712WithCustomChainID;
         });
+
 
         describe('Domain separator should match with encoded separator', function () {
 
             it("should match with encoded separator", async () => {
-                const chainId = +(await provider.getNetwork()).chainId;
+                const chainId: number = +(await provider.getNetwork()).chainId;
 
                 const expectedDomainSeparator = ethers.utils.keccak256(
                     ethers.utils.defaultAbiCoder.encode(
@@ -37,26 +39,22 @@ describe("EIP712", function () {
         });
 
 
-
-
         describe('Domain separator after fork should match', function () {
             it("should change domain_separator after change chainID", async () => {
-                const newChainId:number = (await provider.getNetwork()).chainId + 11;
+                const newChainId: number = (await provider.getNetwork()).chainId + 11;
 
-                await (await permit2CustomChainID.connect(owner).setChainID(ethers.BigNumber.from(newChainId))).wait();
+                await (await EIP712WithCustomChainID.connect(owner).setChainID(ethers.BigNumber.from(newChainId))).wait();
 
                 const expectedDomainSeparator = ethers.utils.keccak256(
                     ethers.utils.defaultAbiCoder.encode(
                         ["bytes32", "bytes32", "uint256", "address"],
-                        [TYPE_HASH, NAME_HASH, ethers.BigNumber.from(newChainId), permit2CustomChainID.address]
+                        [TYPE_HASH, NAME_HASH, ethers.BigNumber.from(newChainId), EIP712WithCustomChainID.address]
                     )
                 );
 
-                let newDomainSeparator = await (await permit2CustomChainID.connect(owner).DOMAIN_SEPARATOR());
+                let newDomainSeparator = await (await EIP712WithCustomChainID.connect(owner).DOMAIN_SEPARATOR());
                 await expect(newDomainSeparator).to.be.equal(expectedDomainSeparator);
             });
         });
-
-
     });
 });
