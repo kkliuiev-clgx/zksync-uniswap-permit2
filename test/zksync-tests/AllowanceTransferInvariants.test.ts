@@ -19,8 +19,8 @@ describe("AllowanceTransferInvariants", function () {
     let permitter1: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[2].privateKey, provider);
     let permitter2: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[1].privateKey, provider);
     let defaultNonce: BigNumberish = ethers.constants.Zero;
-    let choosedPermitter: Wallet;
-    let choosedSpender: Wallet;
+    let chosePermitter: Wallet;
+    let choseSpender: Wallet;
 
 
     beforeEach(async function () {
@@ -34,8 +34,8 @@ describe("AllowanceTransferInvariants", function () {
         await (await token.connect(permitter2).approve(permit2.address, ethers.constants.MaxUint256)).wait();
 
 
-        choosedPermitter = (Math.floor(Math.random() * 2)) ? permitter1 : permitter2;
-        choosedSpender = (Math.floor(Math.random() * 2)) ? spender1 : spender2;
+        chosePermitter = (Math.floor(Math.random() * 2)) ? permitter1 : permitter2;
+        choseSpender = (Math.floor(Math.random() * 2)) ? spender1 : spender2;
     });
 
     describe("Spend Never Exceeds Permit", function () {
@@ -49,20 +49,20 @@ describe("AllowanceTransferInvariants", function () {
                     expiration: defaultExpiration,
                     nonce: defaultNonce,
                 },
-                spender: choosedSpender.address,
+                spender: choseSpender.address,
                 sigDeadline: 2000000000,
             };
 
-            let startBalanceFrom: BigNumberish = await token.connect(choosedPermitter).balanceOf(choosedPermitter.address);
+            let startBalanceFrom: BigNumberish = await token.connect(chosePermitter).balanceOf(chosePermitter.address);
 
-            const sign: Uint8Array = getCompactPermitSignature(permit, choosedPermitter.privateKey, await permit2.DOMAIN_SEPARATOR());
+            const sign: Uint8Array = getCompactPermitSignature(permit, chosePermitter.privateKey, await permit2.DOMAIN_SEPARATOR());
 
-            await (await permit2.connect(choosedPermitter)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](choosedPermitter.address, permit, sign)).wait();
+            await (await permit2.connect(chosePermitter)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](chosePermitter.address, permit, sign)).wait();
 
-            await (await permit2.connect(choosedSpender)["transferFrom(address,address,uint160,address)"](choosedPermitter.address, choosedSpender.address, permitted, token.address)).wait();
+            await (await permit2.connect(choseSpender)["transferFrom(address,address,uint160,address)"](chosePermitter.address, choseSpender.address, permitted, token.address)).wait();
 
-            expect(await token.connect(choosedSpender).balanceOf(choosedSpender.address)).to.be.equal(permitted);
-            expect(await token.connect(choosedPermitter).balanceOf(choosedPermitter.address)).to.be.equal(startBalanceFrom.sub(permitted));
+            expect(await token.connect(choseSpender).balanceOf(choseSpender.address)).to.be.equal(permitted);
+            expect(await token.connect(chosePermitter).balanceOf(chosePermitter.address)).to.be.equal(startBalanceFrom.sub(permitted));
         });
     });
 
@@ -78,19 +78,19 @@ describe("AllowanceTransferInvariants", function () {
                     expiration: defaultExpiration,
                     nonce: defaultNonce,
                 },
-                spender: choosedSpender.address,
+                spender: choseSpender.address,
                 sigDeadline: 2000000000,
             };
 
-            let startBalanceFrom: BigNumberish = await token.connect(choosedPermitter).balanceOf(choosedPermitter.address);
+            let startBalanceFrom: BigNumberish = await token.connect(chosePermitter).balanceOf(chosePermitter.address);
 
-            const sign: Uint8Array = getCompactPermitSignature(permit, choosedPermitter.privateKey, await permit2.DOMAIN_SEPARATOR());
+            const sign: Uint8Array = getCompactPermitSignature(permit, chosePermitter.privateKey, await permit2.DOMAIN_SEPARATOR());
 
-            await (await permit2.connect(choosedPermitter)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](choosedPermitter.address, permit, sign)).wait();
+            await (await permit2.connect(chosePermitter)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](chosePermitter.address, permit, sign)).wait();
 
-            await (await permit2.connect(choosedSpender)["transferFrom(address,address,uint160,address)"](choosedPermitter.address, choosedSpender.address, permitted, token.address)).wait();
+            await (await permit2.connect(choseSpender)["transferFrom(address,address,uint160,address)"](chosePermitter.address, choseSpender.address, permitted, token.address)).wait();
 
-            expect(await token.connect(choosedSpender).balanceOf(choosedSpender.address)).to.be.equal(startBalanceFrom.sub(await token.connect(choosedPermitter).balanceOf(choosedPermitter.address)));
+            expect(await token.connect(choseSpender).balanceOf(choseSpender.address)).to.be.equal(startBalanceFrom.sub(await token.connect(chosePermitter).balanceOf(chosePermitter.address)));
         });
     });
 

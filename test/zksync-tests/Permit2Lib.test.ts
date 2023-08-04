@@ -14,7 +14,7 @@ import {
 import {deployContract, provider} from "./shared/zkSyncUtils";
 import fs from "fs";
 import {expect} from "./shared/expect";
-import {getPermitSignature, PermitSingle, signDigestSeparate} from "./utils/PermitSignature";
+import {getPermitSignatureSeparated, PermitSingle, signDigestSeparate} from "./utils/PermitSignature";
 
 
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
@@ -164,7 +164,7 @@ describe('Permit2Lib', function () {
         };
 
 
-        let sign = getPermitSignature(permitSingle, PK, PERMIT2_DOMAIN_SEPARATOR);
+        let sign = getPermitSignatureSeparated(permitSingle, PK, PERMIT2_DOMAIN_SEPARATOR);
 
 
         await (await permit2Lib.connect(wallet).permit2(
@@ -193,7 +193,7 @@ describe('Permit2Lib', function () {
             sigDeadline: blockTimestamp,
         };
 
-        sign = await getPermitSignature(permitSingle, PK, PERMIT2_DOMAIN_SEPARATOR);
+        sign = await getPermitSignatureSeparated(permitSingle, PK, PERMIT2_DOMAIN_SEPARATOR);
 
         await (await permit2Lib.connect(wallet).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, DECIMAL_MULT, blockTimestamp, sign.v, sign.r, sign.s)).wait();
     });
@@ -278,7 +278,7 @@ describe('Permit2Lib', function () {
                 sigDeadline: blockTimestamp
             };
 
-            const sign = getPermitSignature(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+            const sign = getPermitSignatureSeparated(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
             let amount: BigNumber = ethers.BigNumber.from(2).pow(170);
 
             await expect(permit2Lib.connect(wallet).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, amount, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).to.be.reverted;
@@ -323,7 +323,7 @@ describe('Permit2Lib', function () {
                 sigDeadline: blockTimestamp
             };
 
-            const sign = getPermitSignature(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+            const sign = getPermitSignatureSeparated(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
 
             await (await permit2Lib.connect(wallet).permit2(token.address, PK_OWNER.address, CAFE.address, DECIMAL_MULT, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait();
         });
@@ -346,7 +346,7 @@ describe('Permit2Lib', function () {
             };
 
 
-            const sign = getPermitSignature(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+            const sign = getPermitSignatureSeparated(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
 
             await (await permit2Lib.connect(wallet).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, DECIMAL_MULT, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait();
         });
@@ -371,7 +371,7 @@ describe('Permit2Lib', function () {
             };
 
 
-            const sign = getPermitSignature(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+            const sign = getPermitSignatureSeparated(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
 
             await (await permit2Lib.connect(wallet).permit2(lessDSToken.address, PK_OWNER.address, CAFE.address, DECIMAL_MULT, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait();
             result = await permit2.connect(wallet).allowance(PK_OWNER.address, lessDSToken.address, CAFE.address);
@@ -397,7 +397,7 @@ describe('Permit2Lib', function () {
                 sigDeadline: blockTimestamp
             };
 
-            const sign = getPermitSignature(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+            const sign = getPermitSignatureSeparated(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
             await (await permit2Lib.connect(wallet).permit2(largeDSToken.address, PK_OWNER.address, CAFE.address, DECIMAL_MULT, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait();
 
             result = await permit2.connect(wallet).allowance(PK_OWNER.address, largeDSToken.address, CAFE.address);
@@ -548,7 +548,7 @@ describe('Permit2Lib', function () {
             };
 
 
-            const sign = getPermitSignature(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
+            const sign = getPermitSignatureSeparated(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
             await (await nonPermitToken.connect(PK_OWNER).approve(permit2Lib.address, ethers.constants.MaxUint256)).wait();
 
             await (await permit2Lib.connect(CAFE).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, DECIMAL_MULT, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait();

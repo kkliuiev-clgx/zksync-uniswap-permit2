@@ -1,9 +1,4 @@
-import {BigNumber, BigNumberish, ethers, Signature} from "ethers";
-import {BytesLike} from "@ethersproject/bytes";
-import {defaultAbiCoder} from "ethers/lib/utils";
-import {Address} from "zksync-web3/build/src/types";
-import {setPrevRandao} from "@nomicfoundation/hardhat-network-helpers";
-import {string} from "hardhat/internal/core/params/argumentTypes";
+import {BigNumberish, ethers, Signature} from "ethers";
 
 
 export const _PERMIT_DETAILS_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"));
@@ -30,6 +25,7 @@ export type PermitDetails = {
     // an incrementing value indexed per owner,token,and spender for each signature
     nonce: BigNumberish;
 }
+
 
 export type PermitSingle = {
     // the permit data for a single token alownce
@@ -82,10 +78,12 @@ export type AllowanceTransferDetails = {
     token: string;
 }
 
+
 export type TokenPermissions = {
     token: string; // ERC20 token address
     amount: BigNumberish; // the maximum amount that can be spent
 }
+
 
 export type PermitTransferFrom = {
     permitted: TokenPermissions;
@@ -94,10 +92,12 @@ export type PermitTransferFrom = {
 
 }
 
+
 export type SignatureTransferDetails = {
     to: string; // recipient address
     requestedAmount: BigNumberish; // spender requested amount
 }
+
 
 export type PermitBatchTransferFrom = {
     permitted: TokenPermissions[]; // the tokens and corresponding amounts permitted for a transfer
@@ -106,25 +106,30 @@ export type PermitBatchTransferFrom = {
 
 }
 
+
 export type MockWitness = {
     value: BigNumberish,
     person: string,
     test: boolean
 }
 
-
 export function getCompactPermitSignature(permitSingle: PermitSingle, privateKey: string, domainSeparator: string): Uint8Array {
-    const {v, r, s, vs, compact} = getPermitSignature(permitSingle, privateKey, domainSeparator);
+    const {v, r, s, vs, compact} = getPermitSignatureSeparated(permitSingle, privateKey, domainSeparator);
 
     return ethers.utils.concat([compact]);
 }
 
+export function getPermitSignature(permitSingle: PermitSingle, privateKey: string, domainSeparator: string): Uint8Array {
+    const {v, r, s} = getPermitSignatureSeparated(permitSingle, privateKey, domainSeparator);
+
+    return ethers.utils.concat([r, s, ethers.utils.hexlify(v)]);
+    ;
+}
 
 export function getPermitBatchSignature(permitBatch: PermitBatch, privateKey: string, DOMAIN_SEPARATOR: string) {
-
     let permitDetailsHashes: any[] = []
-    for(const i in permitBatch.details) {
-        let detail = permitBatch.details[i]
+    for (const i in permitBatch.details) {
+        let detail: PermitDetails = permitBatch.details[i];
         permitDetailsHashes[i] = ethers.utils.keccak256(
             ethers.utils.defaultAbiCoder.encode(
                 ['bytes32', 'address', 'uint160', 'uint48', 'uint48'],
@@ -154,7 +159,7 @@ export function getPermitBatchSignature(permitBatch: PermitBatch, privateKey: st
     return signature.compact
 }
 
-export function getPermitSignature(permit: PermitSingle, privateKey: string, DOMAIN_SEPARATOR: string) {
+export function getPermitSignatureSeparated(permit: PermitSingle, privateKey: string, DOMAIN_SEPARATOR: string) {
     let permitHash = ethers.utils.keccak256(
         ethers.utils.defaultAbiCoder.encode(
             ["bytes32", "address", "uint256", "uint256", "uint256"],
@@ -164,7 +169,6 @@ export function getPermitSignature(permit: PermitSingle, privateKey: string, DOM
 
     let hash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['bytes32', 'bytes32', 'address', 'uint256'],
         [_PERMIT_SINGLE_TYPEHASH, permitHash, permit.spender, permit.sigDeadline]));
-
 
     let message = ethers.utils.keccak256(
         ethers.utils.solidityPack(
@@ -203,6 +207,39 @@ export function signDigest(hashedPermit: string, privateKey: string): ethers.uti
     const s: ethers.utils.BytesLike = ethers.utils.arrayify(signature.s);
     const v: number = signature.v;
     return ethers.utils.concat([r, s, ethers.utils.hexlify(v)]);
+}
+
+export function buildAllowanceTransferDetails(
+    tokenAddress: string,
+    transferAmount: BigNumberish,
+    fromAddress: string,
+    toAddress: string): AllowanceTransferDetails {
+    return {
+        token: tokenAddress,
+        amount: transferAmount,
+        from: fromAddress,
+        to: toAddress
+    }
+}
+
+export function buildPermitSingle(
+    tokenAddress: string,
+    amount: BigNumberish,
+    expiration: BigNumberish,
+    nonce: BigNumberish,
+    spender: string,
+    deadline: BigNumberish
+): PermitSingle {
+    return {
+        details: {
+            token: tokenAddress,
+            amount: amount,
+            expiration: expiration,
+            nonce: nonce,
+        },
+        spender: spender,
+        sigDeadline: deadline,
+    };
 }
 
 export function getPermitTransferSignature(
@@ -264,7 +301,6 @@ export function getPermitBatchTransferSignature(
     let permitHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['bytes32', 'bytes32', 'address', 'uint', 'uint256'],
         [_PERMIT_BATCH_TRANSFER_FROM_TYPEHASH, ethers.utils.keccak256(ethers.utils.hexConcat(tokenPermissions)), spender, permit.nonce, permit.deadline]));
 
-
     let message: string = ethers.utils.keccak256(ethers.utils.solidityPack(['string', 'bytes32', 'bytes32'], ["\x19\x01", domainSeparator, permitHash]));
 
     return signDigest(message, privateKey);
@@ -279,7 +315,6 @@ export function getPermitBatchWitnessSignature(
     witness: string,
     domainSeparator: string
 ) {
-
     let tokenPermissions = [];
 
     for (let i = 0; i < permit.permitted.length; ++i) {
@@ -287,10 +322,8 @@ export function getPermitBatchWitnessSignature(
             [_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted[i].token, permit.permitted[i].amount]));
     }
 
-
     let permitHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['bytes32', 'bytes32', 'address', 'uint', 'uint256', 'bytes32'],
         [typeHash, ethers.utils.keccak256(ethers.utils.hexConcat(tokenPermissions)), spender, permit.nonce, permit.deadline, witness]));
-
 
     let message: string = ethers.utils.keccak256(ethers.utils.solidityPack(['string', 'bytes32', 'bytes32'], ["\x19\x01", domainSeparator, permitHash]));
 
@@ -313,7 +346,6 @@ export function getPermitWitnessTransferSignature(
 
     let permitHash = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['bytes32', 'bytes32', 'address', 'uint', 'uint256', 'bytes32'],
         [typeHash, tokenPermissions, spender, permit.nonce, permit.deadline, witness]));
-
 
     let message: string = ethers.utils.keccak256(ethers.utils.solidityPack(['string', 'bytes32', 'bytes32'], ["\x19\x01", domainSeparator, permitHash]));
 

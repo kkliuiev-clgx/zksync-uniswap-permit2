@@ -4,9 +4,14 @@ import {Wallet} from "zksync-web3";
 import fs from "fs";
 import {BigNumber, BigNumberish, ethers} from "ethers";
 import {
-    AllowanceTransferDetails, getCompactPermitSignature, getPermitBatchSignature, getPermitSignature,
+    AllowanceTransferDetails,
+    buildAllowanceTransferDetails,
+    buildPermitSingle,
+    getCompactPermitSignature,
+    getPermitBatchSignature, getPermitSignature,
     PermitBatch,
-    PermitSingle, TokenSpenderPair
+    PermitSingle,
+    TokenSpenderPair
 } from "./utils/PermitSignature";
 import {expect} from "./shared/expect";
 
@@ -32,22 +37,18 @@ describe("AllowanceTransferTest", function () {
 
     let fromPrivateKey: string;
     let fromPrivateKeyDirty: string;
-    let blockTimestampDebug: BigNumberish;
+    let blockTimestamp: BigNumberish;
 
 
     beforeEach(async function () {
-
         let l1TimeStamp: number = 0;
-        let l1BatchRange = await provider.getL1BatchBlockRange(
-            await provider.getL1BatchNumber()
-        );
+        let l1BatchRange = await provider.getL1BatchBlockRange(await provider.getL1BatchNumber());
 
         if (l1BatchRange) {
             l1TimeStamp = (await provider.getBlock(l1BatchRange[1])).l1BatchTimestamp;
         }
 
-
-        blockTimestampDebug = ethers.BigNumber.from(l1TimeStamp + 80000000);
+        blockTimestamp = ethers.BigNumber.from(l1TimeStamp + 80000000);
 
         permit2 = <Permit2>await deployContract('Permit2');
 
@@ -60,7 +61,7 @@ describe("AllowanceTransferTest", function () {
         token0 = <MockERC20>await deployContract('MockERC20', ["Test0", "TEST0", ethers.BigNumber.from(18)]);
         token1 = <MockERC20>await deployContract('MockERC20', ["Test1", "TEST1", ethers.BigNumber.from(18)]);
 
-        await (await mint(from.address, from));
+        await mint(from.address, from);
 
         await (await approve(permit2.address, from));
 
@@ -71,9 +72,7 @@ describe("AllowanceTransferTest", function () {
         await (await permit2.connect(fromDirty).invalidateNonces(token0.address, spender.address, dirtyNonce)).wait();
         await (await permit2.connect(fromDirty).invalidateNonces(token1.address, spender.address, dirtyNonce)).wait();
 
-
         await (await mint(receiver.address, receiver));
-
     });
 
 
@@ -91,7 +90,7 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Approve', function () {
         it('approve should work correct', async function () {
-            await (await permit2.connect(from).approve(token0.address, spender.address, defaultAmount, defaultExpiration)).wait();
+            await expect(permit2.connect(from).approve(token0.address, spender.address, defaultAmount, defaultExpiration)).to.emit(permit2, "Approval");
 
             let result = await permit2.allowance(from.address, token0.address, spender.address);
             expect(result.amount).to.be.equal(defaultAmount);
@@ -103,23 +102,10 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test set allowance', function () {
         it('permit should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-            const {
-                v,
-                r,
-                s
-            } = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            const sign = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
-            await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, ethers.utils.concat([r, s, ethers.utils.hexlify(v)]))).wait();
+            await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
             let result = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
 
@@ -132,16 +118,7 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Set Allowance CompactSig', function () {
         it('allowance with compact sig should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
             let signature: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
             expect(signature.length).to.be.eq(64)
 
@@ -157,19 +134,9 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Set Allowance Incorrect Sig Length', function () {
         it('allowance with incorrect sig length should revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug
-            };
-
-            let signature: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-            let signatureExtra: Uint8Array = ethers.utils.concat([signature, [0], [1]]);
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            let signature: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
+            let signatureExtra: Uint8Array = ethers.utils.concat([signature, [1]]);
             expect(signatureExtra.length).to.be.equal(66);
 
             await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, signatureExtra)).to.be.reverted;
@@ -179,17 +146,8 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Set Allowance Dirty Write', function () {
         it('allowance dirty write should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: dirtyNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-            let signature: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, dirtyNonce, spender.address, blockTimestamp);
+            let signature: Uint8Array = getPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(fromDirty)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](fromDirty.address, permitSingle, signature)).wait();
 
@@ -204,19 +162,9 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Set Allowance Batch Different Nonces', function () {
         it('AllowanceBatch with different nonces should not revert', async function () {
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
 
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-            let signature: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
+            let signature: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, signature)).wait();
 
@@ -227,7 +175,6 @@ describe("AllowanceTransferTest", function () {
             expect(allowanceResult.nonce).to.be.equal(ethers.constants.One);
 
             let address: string[] = [token0.address, token1.address];
-
 
             let permitBatch: PermitBatch = {
                 details: [{
@@ -243,7 +190,7 @@ describe("AllowanceTransferTest", function () {
                         nonce: 0
                     }],
                 spender: spender.address,
-                sigDeadline: blockTimestampDebug
+                sigDeadline: blockTimestamp
             };
 
             let signatureBatch: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
@@ -259,8 +206,6 @@ describe("AllowanceTransferTest", function () {
             expect(allowanceBatchResult1.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult1.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult1.nonce).to.be.equal(ethers.constants.One);
-
-
         });
     });
 
@@ -282,7 +227,7 @@ describe("AllowanceTransferTest", function () {
                         nonce: defaultNonce
                     }],
                 spender: spender.address,
-                sigDeadline: blockTimestampDebug
+                sigDeadline: blockTimestamp
             };
 
             const sign = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
@@ -320,14 +265,12 @@ describe("AllowanceTransferTest", function () {
                         nonce: defaultNonce
                     }],
                 spender: spender.address,
-                sigDeadline: blockTimestampDebug
+                sigDeadline: blockTimestamp
             };
-
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](from.address, permitBatch, sign)).wait();
-
 
             let allowanceBatchResult0 = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
             expect(allowanceBatchResult0.amount).to.be.equal(defaultAmount);
@@ -359,15 +302,12 @@ describe("AllowanceTransferTest", function () {
                         nonce: dirtyNonce
                     }],
                 spender: spender.address,
-                sigDeadline: blockTimestampDebug
+                sigDeadline: blockTimestamp
             };
-
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
 
-
             await (await permit2.connect(fromDirty)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](fromDirty.address, permitBatch, sign)).wait();
-
 
             let allowanceBatchResult0 = await (await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address));
             expect(allowanceBatchResult0.amount).to.be.equal(defaultAmount);
@@ -384,21 +324,11 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test SetAllowanceTransfer', function () {
         it('SetAllowanceTransfer should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-            const sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
             let startBalanceFrom: BigNumberish = await token0.balanceOf(from.address);
             let startBalanceTo: BigNumberish = await token0.balanceOf(ethers.constants.AddressZero);
+
+            const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
@@ -410,27 +340,16 @@ describe("AllowanceTransferTest", function () {
 
             expect(await token0.balanceOf(from.address)).to.be.equal(startBalanceFrom.sub(defaultAmount));
             expect(await token0.balanceOf(ethers.constants.AddressZero)).to.be.equal(startBalanceTo.add(defaultAmount));
-
         });
     });
 
     describe('Test TransferFrom With GasSnapshot', function () {
         it('transferFrom should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-            const sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
             let startBalanceFrom: BigNumber = await token0.balanceOf(from.address);
             let startBalanceTo: BigNumber = await token0.balanceOf(ethers.constants.AddressZero);
+
+            const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
@@ -446,28 +365,15 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Batch TransferFrom With Gas Snapshot', function () {
         it('transferFrom should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount.mul(3),
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-
-            const sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-
-            await (await token0.mint(from.address, defaultAmount.mul(3))).wait();
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             let startBalanceFrom: BigNumberish = await token0.balanceOf(from.address);
             let startBalanceTo: BigNumberish = await token0.balanceOf(ethers.constants.AddressZero);
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
             let allowanceResult = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
-            expect(allowanceResult.amount).to.be.equal(defaultAmount.mul(3));
+            expect(allowanceResult.amount).to.be.equal(defaultAmount);
 
             let owners = [];
             owners.push(from.address);
@@ -475,53 +381,27 @@ describe("AllowanceTransferTest", function () {
             owners.push(from.address);
 
             let transferDetails: AllowanceTransferDetails[] = [];
-            transferDetails.push({
-                token: token0.address,
-                amount: defaultAmount,
-                from: from.address,
-                to: ethers.constants.AddressZero
-            });
-
-            transferDetails.push({
-                token: token0.address,
-                amount: defaultAmount,
-                from: from.address,
-                to: ethers.constants.AddressZero
-            });
-
-            transferDetails.push({
-                token: token0.address,
-                amount: defaultAmount,
-                from: from.address,
-                to: ethers.constants.AddressZero
-            });
-
+            transferDetails.push(buildAllowanceTransferDetails(token0.address, ethers.constants.One.pow(18), from.address, ethers.constants.AddressZero));
+            transferDetails.push(buildAllowanceTransferDetails(token0.address, ethers.constants.One.pow(18), from.address, ethers.constants.AddressZero));
+            transferDetails.push(buildAllowanceTransferDetails(token0.address, ethers.constants.One.pow(18), from.address, ethers.constants.AddressZero));
 
             await (await permit2.connect(spender)["transferFrom((address,address,uint160,address)[])"](transferDetails)).wait();
 
-            expect(await token0.balanceOf(from.address)).to.be.equal(startBalanceFrom.sub(defaultAmount.mul(3)));
-            expect(await token0.balanceOf(ethers.constants.AddressZero)).to.be.equal(startBalanceTo.add(defaultAmount.mul(3)));
+            expect(await token0.balanceOf(from.address)).to.be.equal(startBalanceFrom.sub(ethers.constants.One.pow(18).mul(3)));
+            expect(await token0.balanceOf(ethers.constants.AddressZero)).to.be.equal(startBalanceTo.add(ethers.constants.One.pow(18).mul(3)));
+
+            allowanceResult = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
+            expect(allowanceResult.amount).to.be.equal(defaultAmount.sub(ethers.constants.One.pow(18).mul(3)));
         });
     });
 
 
     describe('Test Set Allowance Transfer DirtyNonce Dirty Transfer', function () {
         it('transferFrom should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: dirtyNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-
-            const sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
-
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, dirtyNonce, spender.address, blockTimestamp);
             let startBalanceFrom: BigNumberish = await token0.balanceOf(fromDirty.address);
+
+            const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
 
             await (await token0.mint(address3.address, defaultAmount)).wait();
             let startBalanceTo: BigNumberish = await token0.balanceOf(address3.address);
@@ -543,44 +423,20 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Set Allowance Invalid Signature', function () {
         it('permit with invalid signature should revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, ethers.constants.AddressZero, blockTimestamp);
+            const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
 
-
-            const sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
-
-            permitSingle = {...permitSingle};
-            permitSingle.spender = ethers.constants.AddressZero;
             await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.reverted;
-
         });
     });
 
 
     describe('Test Set Allowance Deadline Passed', function () {
         it('permit with passed deadline should revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: ethers.constants.Two,
-            };
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, ethers.constants.Two);
 
-            const sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
+            const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
             await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.reverted;
-
         });
     });
 
@@ -588,22 +444,11 @@ describe("AllowanceTransferTest", function () {
     describe('Test Max Allowance', function () {
         it('transferFrom should not revert', async function () {
             let maxAllowance = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff');
-
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: maxAllowance,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-            const sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, maxAllowance, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
             let startBalanceFrom: BigNumberish = await token0.balanceOf(from.address);
             let startBalanceTo: BigNumberish = await token0.balanceOf(ethers.constants.AddressZero);
+
+            const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
@@ -625,19 +470,8 @@ describe("AllowanceTransferTest", function () {
     describe('Test Max Allowance Dirty Write', function () {
         it('max allowance transferFrom should not revert', async function () {
             let maxAllowance = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff');
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: maxAllowance,
-                    expiration: defaultExpiration,
-                    nonce: dirtyNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-            let sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
-
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, maxAllowance, defaultExpiration, dirtyNonce, spender.address, blockTimestamp);
+            let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
             let startBalanceFrom: BigNumberish = await token0.balanceOf(fromDirty.address);
             let startBalanceTo: BigNumberish = await token0.balanceOf(ethers.constants.AddressZero);
 
@@ -658,21 +492,10 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Partial Allowance', function () {
         it('Partial Allowance should not reverted', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
-
-            let sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
             let transferAmount: BigNumberish = ethers.BigNumber.from(5).pow(18);
-
             let startBalanceFrom: BigNumberish = await token0.balanceOf(from.address);
             let startBalanceTo: BigNumberish = await token0.balanceOf(ethers.constants.AddressZero);
 
@@ -693,19 +516,8 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Reuse Ordered Nonce Invalid', function () {
         it('Reused Ordered Nonce Invalid should reverted', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-
-            let sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
@@ -721,19 +533,8 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Invalidate Nonces', function () {
         it('Invalidate Nonces should revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-
-            let sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from).invalidateNonces(token0.address, spender.address, ethers.BigNumber.from(1))).wait();
 
@@ -748,47 +549,22 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Invalidate Multiple Nonces', function () {
         it('Invalidate Multiple Nonces should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-
-            let sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
             let result = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(result.nonce).to.be.equal(ethers.constants.One);
 
-            permitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: result.nonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-
-            sign = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-
+            permitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, result.nonce, spender.address, blockTimestamp);
+            sign = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from).invalidateNonces(token0.address, spender.address, ethers.BigNumber.from(33))).wait();
 
             result = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
             expect(result.nonce).to.be.equal(ethers.BigNumber.from(33));
 
-
-            //should revert
             await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.reverted;
         });
     });
@@ -803,18 +579,8 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Excessive Invalidation', function () {
         it('ExcessiveInvalidation should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-            let sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
             let numInvalidate: BigNumberish = ethers.utils.parseUnits('65535', 0);
 
             await expect(permit2.connect(from).invalidateNonces(token0.address, spender.address, numInvalidate.add(ethers.constants.One))).to.be.reverted;
@@ -828,19 +594,8 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test BatchTransferFrom', function () {
         it('BatchTransferFrom should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-            let sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
             let startBalanceFrom: BigNumberish = await token0.balanceOf(from.address);
             let startBalanceTo: BigNumberish = await token0.balanceOf(ethers.constants.AddressZero);
 
@@ -850,27 +605,11 @@ describe("AllowanceTransferTest", function () {
             expect(result.amount).to.be.equal(defaultAmount);
 
             let transferDetails: AllowanceTransferDetails[] = [];
-            let transferAmount: BigNumber = ethers.BigNumber.from(1)
-            transferDetails.push({
-                token: token0.address,
-                amount: transferAmount,
-                from: from.address,
-                to: ethers.constants.AddressZero
-            });
+            let transferAmount: BigNumber = ethers.BigNumber.from(1);
 
-            transferDetails.push({
-                token: token0.address,
-                amount: transferAmount,
-                from: from.address,
-                to: ethers.constants.AddressZero
-            });
-
-            transferDetails.push({
-                token: token0.address,
-                amount: transferAmount,
-                from: from.address,
-                to: ethers.constants.AddressZero
-            });
+            transferDetails.push(buildAllowanceTransferDetails(token0.address, transferAmount, from.address, ethers.constants.AddressZero));
+            transferDetails.push(buildAllowanceTransferDetails(token0.address, transferAmount, from.address, ethers.constants.AddressZero));
+            transferDetails.push(buildAllowanceTransferDetails(token0.address, transferAmount, from.address, ethers.constants.AddressZero));
 
             await (await permit2.connect(spender)["transferFrom((address,address,uint160,address)[])"](transferDetails)).wait();
 
@@ -902,11 +641,10 @@ describe("AllowanceTransferTest", function () {
                         nonce: defaultNonce
                     }],
                 spender: spender.address,
-                sigDeadline: blockTimestampDebug
+                sigDeadline: blockTimestamp
             };
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-
 
             let startBalanceFrom0: BigNumberish = await token0.balanceOf(from.address);
             let startBalanceFrom1: BigNumberish = await token1.balanceOf(from.address);
@@ -926,20 +664,11 @@ describe("AllowanceTransferTest", function () {
             owners.push(from.address);
 
             let transferDetails: AllowanceTransferDetails[] = [];
-            let transferAmount: BigNumber = ethers.BigNumber.from(1)
-            transferDetails.push({
-                token: token0.address,
-                amount: transferAmount,
-                from: from.address,
-                to: ethers.constants.AddressZero
-            });
+            let transferAmount: BigNumber = ethers.BigNumber.from(1);
 
-            transferDetails.push({
-                token: token1.address,
-                amount: transferAmount,
-                from: from.address,
-                to: ethers.constants.AddressZero
-            });
+            transferDetails.push(buildAllowanceTransferDetails(token0.address, transferAmount, from.address, ethers.constants.AddressZero));
+
+            transferDetails.push(buildAllowanceTransferDetails(token1.address, transferAmount, from.address, ethers.constants.AddressZero));
 
             await (await permit2.connect(spender)["transferFrom((address,address,uint160,address)[])"](transferDetails)).wait();
 
@@ -960,48 +689,27 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test BatchTransferFrom Different Owners', function () {
         it('BatchTransferFrom should not revert', async function () {
-            let permitSingle: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
+            let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
+            let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
-            let sign: Uint8Array = getCompactPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-
-
-            let permitSingleDirty: PermitSingle = {
-                details: {
-                    token: token0.address,
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: dirtyNonce,
-                },
-                spender: spender.address,
-                sigDeadline: blockTimestampDebug,
-            };
-
-            let signDirty: Uint8Array = getCompactPermitSignature(permitSingleDirty, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
+            let permitSingleDirty: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, dirtyNonce, spender.address, blockTimestamp);
+            let signDirty: Uint8Array = getPermitSignature(permitSingleDirty, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
 
             let startBalanceFrom: BigNumberish = await token0.balanceOf(from.address);
             let startBalanceTo: BigNumberish = await token0.balanceOf(spender.address);
             let startBalanceFromDirty: BigNumberish = await token0.balanceOf(fromDirty.address);
 
-
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
             await (await permit2.connect(fromDirty)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](fromDirty.address, permitSingleDirty, signDirty)).wait();
 
-
             let result0 = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
             expect(result0.amount).to.be.equal(defaultAmount);
+
             let result1 = await (await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address));
             expect(result1.amount).to.be.equal(defaultAmount);
 
             let transferDetails: AllowanceTransferDetails[] = [];
+
             let transferAmount: BigNumber = ethers.constants.One.pow(18);
             transferDetails.push({
                 token: token0.address,
@@ -1019,7 +727,6 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(spender)["transferFrom((address,address,uint160,address)[])"](transferDetails)).wait();
 
-
             let amount: BigNumberish = ethers.BigNumber.from(2).mul(ethers.constants.One.pow(18))
             expect(await token0.balanceOf(from.address)).to.be.equal(startBalanceFrom.sub(transferAmount));
             expect(await token0.balanceOf(fromDirty.address)).to.be.equal(startBalanceFromDirty.sub(transferAmount));
@@ -1027,6 +734,7 @@ describe("AllowanceTransferTest", function () {
 
             result0 = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
             expect(result0.amount).to.be.equal(defaultAmount.sub(transferAmount));
+
             result1 = await (await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address));
             expect(result1.amount).to.be.equal(defaultAmount.sub(transferAmount));
         });
@@ -1051,9 +759,8 @@ describe("AllowanceTransferTest", function () {
                         nonce: defaultNonce
                     }],
                 spender: spender.address,
-                sigDeadline: blockTimestampDebug
+                sigDeadline: blockTimestamp
             };
-
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
@@ -1093,7 +800,6 @@ describe("AllowanceTransferTest", function () {
             expect(result1.amount).to.be.equal(ethers.constants.Zero);
             expect(result1.expiration).to.be.equal(defaultExpiration);
             expect(result1.nonce).to.be.equal(ethers.constants.One);
-
         });
     });
 
@@ -1116,7 +822,7 @@ describe("AllowanceTransferTest", function () {
                         nonce: defaultNonce
                     }],
                 spender: spender.address,
-                sigDeadline: blockTimestampDebug
+                sigDeadline: blockTimestamp
             };
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
@@ -1132,7 +838,6 @@ describe("AllowanceTransferTest", function () {
             expect(result1.expiration).to.be.equal(defaultExpiration);
             expect(result1.nonce).to.be.equal(ethers.constants.One);
 
-
             let approvals: TokenSpenderPair[] = [];
 
             approvals.push({
@@ -1145,7 +850,6 @@ describe("AllowanceTransferTest", function () {
                 spender: spender.address
             });
             await (await permit2.connect(from).lockdown(approvals)).wait();
-
 
             result0 = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
             expect(result0.amount).to.be.equal(ethers.constants.Zero);
