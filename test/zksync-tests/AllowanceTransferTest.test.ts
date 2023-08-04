@@ -5,11 +5,11 @@ import fs from "fs";
 import {BigNumber, BigNumberish, ethers} from "ethers";
 import {
     AllowanceTransferDetails,
-    buildAllowanceTransferDetails,
+    buildAllowanceTransferDetails, buildPermitBatch, buildPermitDetails,
     buildPermitSingle,
     getCompactPermitSignature,
     getPermitBatchSignature, getPermitSignature,
-    PermitBatch,
+    PermitBatch, PermitDetails,
     PermitSingle,
     TokenSpenderPair
 } from "./utils/PermitSignature";
@@ -19,7 +19,6 @@ const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/s
 const DECIMAL_MULT: BigNumber = ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18));
 
 describe("AllowanceTransferTest", function () {
-
     const defaultExpiration: BigNumber = ethers.BigNumber.from(Date.now() + 50000);
     let token0: MockERC20;
     let token1: MockERC20;
@@ -175,23 +174,12 @@ describe("AllowanceTransferTest", function () {
             expect(allowanceResult.nonce).to.be.equal(ethers.constants.One);
 
             let address: string[] = [token0.address, token1.address];
+            let permitDetails: PermitDetails[] = [];
 
-            let permitBatch: PermitBatch = {
-                details: [{
-                    token: address[0],
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: dirtyNonce
-                },
-                    {
-                        token: address[1],
-                        amount: defaultAmount,
-                        expiration: defaultExpiration,
-                        nonce: 0
-                    }],
-                spender: spender.address,
-                sigDeadline: blockTimestamp
-            };
+            permitDetails.push(buildPermitDetails(address[0], defaultAmount, defaultExpiration, dirtyNonce));
+            permitDetails.push(buildPermitDetails(address[1], defaultAmount, defaultExpiration, ethers.constants.Zero));
+
+            let permitBatch: PermitBatch = buildPermitBatch(permitDetails, spender.address, blockTimestamp);
 
             let signatureBatch: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
@@ -212,23 +200,12 @@ describe("AllowanceTransferTest", function () {
     describe('Test Set Allowance Batch', function () {
         it('permit should not revert', async function () {
             let tokens: string[] = [token0.address, token1.address];
+            let permitDetails: PermitDetails[] = [];
 
-            let permitBatch: PermitBatch = {
-                details: [{
-                    token: tokens[0],
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce
-                },
-                    {
-                        token: tokens[1],
-                        amount: defaultAmount,
-                        expiration: defaultExpiration,
-                        nonce: defaultNonce
-                    }],
-                spender: spender.address,
-                sigDeadline: blockTimestamp
-            };
+            permitDetails.push(buildPermitDetails(tokens[0], defaultAmount, defaultExpiration, defaultNonce));
+            permitDetails.push(buildPermitDetails(tokens[1], defaultAmount, defaultExpiration, defaultNonce));
+
+            let permitBatch: PermitBatch = buildPermitBatch(permitDetails, spender.address, blockTimestamp);
 
             const sign = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
@@ -250,23 +227,12 @@ describe("AllowanceTransferTest", function () {
     describe('Test Set Allowance Batch Event', function () {
         it('permit should not revert', async function () {
             let tokens: string[] = [token0.address, token1.address];
+            let permitDetails: PermitDetails[] = [];
 
-            let permitBatch: PermitBatch = {
-                details: [{
-                    token: tokens[0],
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce
-                },
-                    {
-                        token: tokens[1],
-                        amount: defaultAmount,
-                        expiration: defaultExpiration,
-                        nonce: defaultNonce
-                    }],
-                spender: spender.address,
-                sigDeadline: blockTimestamp
-            };
+            permitDetails.push(buildPermitDetails(tokens[0], defaultAmount, defaultExpiration, defaultNonce));
+            permitDetails.push(buildPermitDetails(tokens[1], defaultAmount, defaultExpiration, defaultNonce));
+
+            let permitBatch: PermitBatch = buildPermitBatch(permitDetails, spender.address, blockTimestamp);
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
@@ -287,34 +253,23 @@ describe("AllowanceTransferTest", function () {
     describe('Test Set Allowance Batch Dirty Write', function () {
         it('permit should not revert', async function () {
             let tokens: string[] = [token0.address, token1.address];
+            let permitDetails: PermitDetails[] = [];
 
-            let permitBatch: PermitBatch = {
-                details: [{
-                    token: tokens[0],
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: dirtyNonce
-                },
-                    {
-                        token: tokens[1],
-                        amount: defaultAmount,
-                        expiration: defaultExpiration,
-                        nonce: dirtyNonce
-                    }],
-                spender: spender.address,
-                sigDeadline: blockTimestamp
-            };
+            permitDetails.push(buildPermitDetails(tokens[0], defaultAmount, defaultExpiration, dirtyNonce));
+            permitDetails.push(buildPermitDetails(tokens[1], defaultAmount, defaultExpiration, dirtyNonce));
+
+            let permitBatch: PermitBatch = buildPermitBatch(permitDetails, spender.address, blockTimestamp);
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(fromDirty)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](fromDirty.address, permitBatch, sign)).wait();
 
-            let allowanceBatchResult0 = await (await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address));
+            let allowanceBatchResult0 = await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address);
             expect(allowanceBatchResult0.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult0.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult0.nonce).to.be.equal(ethers.constants.Two);
 
-            let allowanceBatchResult1 = await (await permit2.connect(fromDirty).allowance(fromDirty.address, token1.address, spender.address));
+            let allowanceBatchResult1 = await permit2.connect(fromDirty).allowance(fromDirty.address, token1.address, spender.address);
             expect(allowanceBatchResult1.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult1.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult1.nonce).to.be.equal(ethers.constants.Two);
@@ -626,23 +581,12 @@ describe("AllowanceTransferTest", function () {
     describe('Test BatchTransferFrom MultiToken', function () {
         it('BatchTransferFrom should not revert', async function () {
             let tokens: string[] = [token0.address, token1.address];
+            let permitDetails: PermitDetails[] = [];
 
-            let permitBatch: PermitBatch = {
-                details: [{
-                    token: tokens[0],
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce
-                },
-                    {
-                        token: tokens[1],
-                        amount: defaultAmount,
-                        expiration: defaultExpiration,
-                        nonce: defaultNonce
-                    }],
-                spender: spender.address,
-                sigDeadline: blockTimestamp
-            };
+            permitDetails.push(buildPermitDetails(tokens[0], defaultAmount, defaultExpiration, defaultNonce));
+            permitDetails.push(buildPermitDetails(tokens[1], defaultAmount, defaultExpiration, defaultNonce));
+
+            let permitBatch: PermitBatch = buildPermitBatch(permitDetails, spender.address, blockTimestamp);
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
@@ -744,23 +688,12 @@ describe("AllowanceTransferTest", function () {
     describe('Test Lockdown', function () {
         it('should pass lockdown test', async function () {
             let tokens: string[] = [token0.address, token1.address];
+            let permitDetails: PermitDetails[] = [];
 
-            let permitBatch: PermitBatch = {
-                details: [{
-                    token: tokens[0],
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce
-                },
-                    {
-                        token: tokens[1],
-                        amount: defaultAmount,
-                        expiration: defaultExpiration,
-                        nonce: defaultNonce
-                    }],
-                spender: spender.address,
-                sigDeadline: blockTimestamp
-            };
+            permitDetails.push(buildPermitDetails(tokens[0], defaultAmount, defaultExpiration, defaultNonce));
+            permitDetails.push(buildPermitDetails(tokens[1], defaultAmount, defaultExpiration, defaultNonce));
+
+            let permitBatch: PermitBatch = buildPermitBatch(permitDetails, spender.address, blockTimestamp);
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
@@ -807,23 +740,13 @@ describe("AllowanceTransferTest", function () {
     describe('Test Lockdown Event', function () {
         it('should pass lockdown', async function () {
             let tokens: string[] = [token0.address, token1.address];
+            let permitDetails: PermitDetails[] = [];
 
-            let permitBatch: PermitBatch = {
-                details: [{
-                    token: tokens[0],
-                    amount: defaultAmount,
-                    expiration: defaultExpiration,
-                    nonce: defaultNonce
-                },
-                    {
-                        token: tokens[1],
-                        amount: defaultAmount,
-                        expiration: defaultExpiration,
-                        nonce: defaultNonce
-                    }],
-                spender: spender.address,
-                sigDeadline: blockTimestamp
-            };
+            permitDetails.push(buildPermitDetails(tokens[0], defaultAmount, defaultExpiration, defaultNonce));
+            permitDetails.push(buildPermitDetails(tokens[1], defaultAmount, defaultExpiration, defaultNonce));
+
+            let permitBatch: PermitBatch = buildPermitBatch(permitDetails, spender.address, blockTimestamp);
+
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](from.address, permitBatch, sign)).wait();
@@ -849,7 +772,7 @@ describe("AllowanceTransferTest", function () {
                 token: token1.address,
                 spender: spender.address
             });
-            await (await permit2.connect(from).lockdown(approvals)).wait();
+            await expect(permit2.connect(from).lockdown(approvals)).to.emit(permit2, "Lockdown");
 
             result0 = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
             expect(result0.amount).to.be.equal(ethers.constants.Zero);
@@ -862,5 +785,4 @@ describe("AllowanceTransferTest", function () {
             expect(result1.nonce).to.be.equal(ethers.constants.One);
         });
     });
-
 });

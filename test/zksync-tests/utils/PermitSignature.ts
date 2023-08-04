@@ -222,6 +222,33 @@ export function buildAllowanceTransferDetails(
     }
 }
 
+
+export function buildPermitDetails(
+    tokenAddress: string,
+    amount: BigNumberish,
+    expiration: BigNumberish,
+    nonce: BigNumberish
+): PermitDetails {
+    return {
+        token: tokenAddress,
+        amount: amount,
+        expiration: expiration,
+        nonce: nonce
+    }
+}
+
+export function buildPermitBatch(
+    permitDetails: PermitDetails[],
+    spender: string,
+    deadline: BigNumberish
+): PermitBatch {
+    return {
+        details: permitDetails,
+        spender: spender,
+        sigDeadline: deadline
+    };
+}
+
 export function buildPermitSingle(
     tokenAddress: string,
     amount: BigNumberish,

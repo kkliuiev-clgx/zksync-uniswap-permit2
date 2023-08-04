@@ -88,14 +88,11 @@ describe('AllowanceUnitTest', function () {
             let expiration: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
             let nonce: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
 
-
             let word: BigNumberish = (nonce.shl(208)).or(expiration.shl(160).or(amount));
 
             await (await permit2.doStore(from.address, token1.address, spender.address, word)).wait();
 
-
             let allowanceResultAfter = (await permit2.connect(from).allowance(from.address, token1.address, spender.address));
-
 
             expect(allowanceResultAfter.amount).to.be.equal(amount);
             expect(allowanceResultAfter.expiration).to.be.equal(expiration);
