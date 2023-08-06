@@ -45,17 +45,10 @@ const BOB: Wallet = new Wallet(BOB_PK, provider);
 const wallet_PK = RICH_WALLET_PRIVATE_KEYS[3].privateKey;
 const wallet: Wallet = new Wallet(wallet_PK, provider);
 
-const BEEF_PK = RICH_WALLET_PRIVATE_KEYS[4].privateKey;
-const BEEF: Wallet = new Wallet(BEEF_PK, provider);
-
 const DECIMALS: BigNumber = ethers.BigNumber.from(18);
 
 describe('Permit2Lib', function () {
-
-
     let PERMIT_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"));
-
-
     let TOKEN_DOMAIN_SEPARATOR: string;
     let PERMIT2_DOMAIN_SEPARATOR: string;
     let TEST_SML_DS_DOMAIN_SEPARATOR: string;
@@ -106,44 +99,34 @@ describe('Permit2Lib', function () {
         TEST_SML_DS_DOMAIN_SEPARATOR = await lessDSToken.DOMAIN_SEPARATOR();
         TEST_LG_DS_DOMAIN_SEPARATOR = await largeDSToken.DOMAIN_SEPARATOR();
 
-        await token.connect(wallet).mint(wallet.address, amount);
-        await token.connect(wallet).approve(wallet.address, amount);
-        await token.connect(PK_OWNER).approve(permit2.address, amount);
+        await (await token.connect(wallet).mint(wallet.address, amount)).wait();
+        await (await token.connect(wallet).approve(wallet.address, amount)).wait();
+        await (await token.connect(PK_OWNER).approve(permit2.address, amount)).wait();
 
-        await lessDSToken.connect(wallet).mint(wallet.address, amount);
-        await lessDSToken.connect(wallet).approve(wallet.address, amount);
-        await lessDSToken.connect(wallet).approve(permit2.address, amount);
+        await (await lessDSToken.connect(wallet).mint(wallet.address, amount)).wait();
+        await (await lessDSToken.connect(wallet).approve(wallet.address, amount)).wait();
+        await (await lessDSToken.connect(wallet).approve(permit2.address, amount)).wait();
 
-        await lessDSToken.connect(wallet).mint(PK_OWNER.address, amount);
-        await lessDSToken.connect(PK_OWNER).approve(permit2.address, amount);
+        await (await lessDSToken.connect(wallet).mint(PK_OWNER.address, amount)).wait();
+        await (await lessDSToken.connect(PK_OWNER).approve(permit2.address, amount)).wait();
 
-        await token.connect(wallet).mint(PK_OWNER.address, amount);
-        await token.connect(PK_OWNER).approve(permit2.address, amount);
+        await (await token.connect(wallet).mint(PK_OWNER.address, amount)).wait();
+        await (await token.connect(PK_OWNER).approve(permit2.address, amount)).wait();
 
-        await nonPermitToken.connect(wallet).mint(wallet.address, amount);
-        await nonPermitToken.connect(wallet).approve(wallet.address, amount);
-        await nonPermitToken.connect(wallet).approve(permit2.address, amount);
+        await (await nonPermitToken.connect(wallet).mint(wallet.address, amount)).wait();
+        await (await nonPermitToken.connect(wallet).approve(wallet.address, amount)).wait();
+        await (await nonPermitToken.connect(wallet).approve(permit2.address, amount)).wait();
 
-        await nonPermitToken.connect(wallet).mint(PK_OWNER.address, amount);
-        await nonPermitToken.connect(PK_OWNER).approve(permit2.address, amount);
+        await (await nonPermitToken.connect(wallet).mint(PK_OWNER.address, amount)).wait();
+        await (await nonPermitToken.connect(PK_OWNER).approve(permit2.address, amount)).wait();
     });
 
     beforeEach(async function () {
-        let l1TimeStamp: number = 0;
-        let l1BatchRange = await provider.getL1BatchBlockRange(
-            await provider.getL1BatchNumber()
-        );
-
-        if (l1BatchRange) {
-            l1TimeStamp = (await provider.getBlock(l1BatchRange[1])).l1BatchTimestamp;
-        }
-
-        blockTimestamp = ethers.BigNumber.from(l1TimeStamp + 80000000);
+        let timestamp = (await provider.getBlock('latest')).timestamp;
+        blockTimestamp = ethers.BigNumber.from(timestamp + 80000000);
 
         let allowanceBefore = await permit2.connect(wallet).allowance(PK_OWNER.address, token.address, CAFE.address);
-
         let permitSingle: PermitSingle = buildPermitSingle(token.address, DECIMAL_MULT, UINT48_MAX, allowanceBefore.nonce, CAFE.address, blockTimestamp);
-
         let sign = getPermitSignatureSeparated(permitSingle, PK, PERMIT2_DOMAIN_SEPARATOR);
 
         await (await permit2Lib.connect(wallet).permit2(
@@ -231,7 +214,6 @@ describe('Permit2Lib', function () {
         });
     });
 
-
     describe('Test Permit2 Invalid Amount', function () {
         it('should revert with invalid amount', async function () {
             let result = await permit2.connect(wallet).allowance(PK_OWNER.address, nonPermitToken.address, CAFE.address);
@@ -241,17 +223,16 @@ describe('Permit2Lib', function () {
             const sign = getPermitSignatureSeparated(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
             let amount: BigNumber = ethers.BigNumber.from(2).pow(170);
 
-            await expect(permit2Lib.connect(wallet).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, amount, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).to.be.reverted;
+            await expect((await permit2Lib.connect(wallet).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, amount, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Standard TransferFrom', function () {
         it('TransferFrom should not revert', async function () {
-            await expect(token.connect(wallet).transferFrom(wallet.address, BEEF.address, DECIMAL_MULT)).to.be.not.reverted;
+            let randomAddress = ethers.utils.hexlify(ethers.utils.randomBytes(20));
+            await (await token.connect(wallet).transferFrom(wallet.address, randomAddress, DECIMAL_MULT)).wait();
         });
     });
-
 
     describe('Test Open-Zeppelin SafeTransferFrom', function () {
         it('SafeTransferFrom should not revert', async function () {
@@ -259,7 +240,6 @@ describe('Permit2Lib', function () {
             await expect(safeERC20.connect(wallet).safeTransferFrom(token.address, wallet.address, BOB.address, DECIMAL_MULT)).to.be.not.reverted;
         });
     });
-
 
     describe('Test TransferFrom2', function () {
         it('TransferFrom2 should not revert', async function () {
@@ -280,7 +260,6 @@ describe('Permit2Lib', function () {
         });
     });
 
-
     describe('Test Permit2 Non Permit Token', function () {
         it('Test Permit2 with Non Permit Token should not revert', async function () {
             const result = await permit2.connect(wallet).allowance(PK_OWNER.address, nonPermitToken.address, CAFE.address);
@@ -292,7 +271,6 @@ describe('Permit2Lib', function () {
             await (await permit2Lib.connect(wallet).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, DECIMAL_MULT, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait();
         });
     });
-
 
     describe('Test Permit2 Smaller DS', function () {
         it('Permit2 with Smaller DS should not revert', async function () {
@@ -310,7 +288,6 @@ describe('Permit2Lib', function () {
         });
     });
 
-
     describe('Test Permit2 Larger DS', function () {
         it('Permit2 with Larger DS should not revert', async function () {
             let result = await permit2.connect(wallet).allowance(PK_OWNER.address, largeDSToken.address, CAFE.address);
@@ -325,7 +302,6 @@ describe('Permit2Lib', function () {
             expect(result.amount).to.be.equal(DECIMAL_MULT);
         });
     });
-
 
     describe('Test Permit2 Larger DS Revert', function () {
         it('Permit2 with Larger DS should revert', async function () {
@@ -345,10 +321,9 @@ describe('Permit2Lib', function () {
 
             const sign = signDigestSeparate(message, PK);
 
-            await expect(permit2Lib.connect(wallet).permit2(largeDSToken.address, PK_OWNER.address, CAFE.address, ethers.BigNumber.from(10000), blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).to.be.reverted;
+            await expect((await permit2Lib.connect(wallet).permit2(largeDSToken.address, PK_OWNER.address, CAFE.address, ethers.BigNumber.from(10000), blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Permit2 SmallerDSToken No Revert', function () {
         it('Permit2 with SmallerDSToken should not revert', async function () {
@@ -380,7 +355,6 @@ describe('Permit2Lib', function () {
         });
     });
 
-
     describe('Test TransferFrom2 NonPermitToken', function () {
         it('TransferFrom2 with token without permit should not revert', async function () {
             await (await nonPermitToken.connect(PK_OWNER).approve(permit2Lib.address, ethers.constants.MaxUint256)).wait();
@@ -392,10 +366,9 @@ describe('Permit2Lib', function () {
     describe('Test TransferFrom2 InvalidAmount', function () {
         it('TransferFrom2 with invalid amount should revert', async function () {
             await (await token.connect(PK_OWNER).approve(CAFE.address, ethers.constants.MaxUint256)).wait();
-            await expect(permit2Lib.connect(CAFE).transferFrom2(token.address, PK_OWNER.address, CAFE.address, ethers.constants.Two.pow(170))).to.be.reverted;
+            await expect((await permit2Lib.connect(CAFE).transferFrom2(token.address, PK_OWNER.address, CAFE.address, ethers.constants.Two.pow(170))).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Open-Zappelin SafePermit Plus OZ Safe TransferFrom', function () {
         it('TransferFrom should not revert', async function () {
@@ -420,7 +393,6 @@ describe('Permit2Lib', function () {
             await expect(safeERC20.connect(BOB).safeTransferFrom(token.address, PK_OWNER.address, BOB.address, DECIMAL_MULT)).to.be.not.reverted;
         });
     });
-
 
     describe('Test Permit2 Plus TransferFrom2', function () {
         it('should not revert', async function () {
@@ -447,7 +419,6 @@ describe('Permit2Lib', function () {
         });
     });
 
-
     describe('Test Permit2 Plus TransferFrom2 With NonPermit', function () {
         it('TransferFrom2 should not revert', async function () {
             let result = await permit2.connect(wallet).allowance(PK_OWNER.address, nonPermitToken.address, CAFE.address);
@@ -461,21 +432,17 @@ describe('Permit2Lib', function () {
         });
     });
 
-
     describe('Test Permit2 DSLessToken', function () {
         it('should be true', async function () {
             await expect(await permit2Lib.connect(wallet).testPermit2Code(lessDSToken.address)).to.be.true;
         });
     });
 
-
     describe('Test Permit2 DS More Token', function () {
         it('should be false', async function () {
-            let largerNonStandardDSToken = await deployContract("MockNonPermitNonERC20WithDS");
             await expect(await permit2Lib.connect(wallet).testPermit2Code(largerNonStandardDSToken.address)).to.be.false;
         });
     });
-
 
     describe('Test Permit2 DS More 32 Token', function () {
         it('should be false', async function () {

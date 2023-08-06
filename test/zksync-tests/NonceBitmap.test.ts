@@ -5,7 +5,6 @@ import {Wallet} from "zksync-web3";
 import {BigNumber, BigNumberish, ethers} from "ethers";
 import {expect} from "./shared/expect";
 
-
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
 
 function getRandomBigInt(): BigNumber {
@@ -14,15 +13,12 @@ function getRandomBigInt(): BigNumber {
 
 describe('NonceBitmap', function () {
     let permit2: MockPermit2;
-    let owner: Wallet;
     let spender: Wallet;
 
     beforeEach(async function () {
         permit2 = <MockPermit2>await deployContract('MockPermit2');
-        owner = new Wallet(RICH_WALLET_PRIVATE_KEYS[0].privateKey, provider);
         spender = new Wallet(RICH_WALLET_PRIVATE_KEYS[1].privateKey, provider);
     });
-
 
     describe('Test Low Nonces', function () {
         it('should tested', async function () {
@@ -30,24 +26,21 @@ describe('NonceBitmap', function () {
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).wait();
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).wait();
 
-            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).to.be.reverted;
+            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).wait()).to.be.reverted;
+            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(5))).wait()).to.be.reverted;
+            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).wait()).to.be.reverted;
 
-            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(5))).to.be.reverted;
-
-            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).to.be.reverted;
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(4))).wait();
         });
     });
 
-
     describe('Test Nonce Word Boundary', function () {
-        it('should fail2', async function () {
+        it('should fail 2', async function () {
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).wait();
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).wait();
 
-            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).to.be.reverted;
-
-            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).to.be.reverted;
+            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).wait()).to.be.reverted;
+            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).wait()).to.be.reverted;
         });
     });
 
@@ -57,9 +50,8 @@ describe('NonceBitmap', function () {
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(2).pow(240))).wait();
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, (ethers.BigNumber.from(2).pow(240)).add(ethers.constants.One))).wait();
 
-            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(2).pow(240))).to.be.reverted;
-
-            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, (ethers.BigNumber.from(2).pow(240)).add(ethers.constants.One))).to.be.reverted;
+            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(2).pow(240))).wait()).to.be.reverted;
+            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, (ethers.BigNumber.from(2).pow(240)).add(ethers.constants.One))).wait()).to.be.reverted;
         });
     });
 
@@ -68,13 +60,11 @@ describe('NonceBitmap', function () {
         it('should fail 4', async function () {
             await (await permit2.connect(spender).invalidateUnorderedNonces(ethers.constants.Zero, ethers.constants.Two.pow(256).sub(ethers.constants.One))).wait();
 
-            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).to.be.reverted;
+            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).wait()).to.be.reverted;
+            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).wait()).to.be.reverted;
+            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(254))).wait()).to.be.reverted;
+            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).wait()).to.be.reverted;
 
-            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).to.be.reverted;
-
-            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(254))).to.be.reverted;
-
-            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).to.be.reverted;
             await (await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).wait()
         });
     });
@@ -88,9 +78,9 @@ describe('NonceBitmap', function () {
             await (await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(254))).wait();
             await (await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).wait();
 
-            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).to.be.reverted;
+            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).wait()).to.be.reverted;
+            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(511))).wait()).to.be.reverted;
 
-            await expect( permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(511))).to.be.reverted;
             await (await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(512))).wait();
         });
     });
@@ -101,7 +91,7 @@ describe('NonceBitmap', function () {
             let nonce: BigNumberish = getRandomBigInt();
             await (await permit2.useUnorderedNonce(spender.address, nonce)).wait();
 
-            await expect(permit2.useUnorderedNonce(spender.address, nonce)).to.be.reverted;
+            await expect((await permit2.useUnorderedNonce(spender.address, nonce)).wait()).to.be.reverted;
         });
     });
 
@@ -114,7 +104,7 @@ describe('NonceBitmap', function () {
             await (await permit2.useUnorderedNonce(spender.address, first)).wait();
 
             if (first == second) {
-                await expect(permit2.useUnorderedNonce(spender.address, second)).to.be.reverted;
+                await expect((await permit2.useUnorderedNonce(spender.address, second)).wait()).to.be.reverted;
             } else {
                 await (await permit2.useUnorderedNonce(spender.address, second)).wait();
             }
@@ -140,7 +130,6 @@ describe('NonceBitmap', function () {
             let mask: BigNumberish = getRandomBigInt();
 
             await (await permit2.connect(spender).invalidateUnorderedNonces(wordPos, startBitmap)).wait();
-
             expect(await permit2.connect(spender).nonceBitmap(spender.address, wordPos)).to.be.equal(startBitmap);
 
             let finalBitmap: BigNumberish = startBitmap.or(mask);

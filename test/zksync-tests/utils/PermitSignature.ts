@@ -1,16 +1,10 @@
 import {BigNumberish, ethers, Signature} from "ethers";
 
-
 export const _PERMIT_DETAILS_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"));
-
 export const _PERMIT_SINGLE_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"));
-
 export const _PERMIT_BATCH_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"));
-
 export const _TOKEN_PERMISSIONS_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("TokenPermissions(address token,uint256 amount)"));
-
 export const _PERMIT_TRANSFER_FROM_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"));
-
 export const _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PermitBatchTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"));
 
 
@@ -26,9 +20,8 @@ export type PermitDetails = {
     nonce: BigNumberish;
 }
 
-
 export type PermitSingle = {
-    // the permit data for a single token alownce
+    // the permit data for a single token allowance
     details: PermitDetails;
     // address permissioned on the allowed tokens
     spender: string;
@@ -84,7 +77,6 @@ export type TokenPermissions = {
     amount: BigNumberish; // the maximum amount that can be spent
 }
 
-
 export type PermitTransferFrom = {
     permitted: TokenPermissions;
     nonce: BigNumberish; // a unique value for every token owner's signature to prevent signature replays
@@ -92,12 +84,10 @@ export type PermitTransferFrom = {
 
 }
 
-
 export type SignatureTransferDetails = {
     to: string; // recipient address
     requestedAmount: BigNumberish; // spender requested amount
 }
-
 
 export type PermitBatchTransferFrom = {
     permitted: TokenPermissions[]; // the tokens and corresponding amounts permitted for a transfer
@@ -106,7 +96,6 @@ export type PermitBatchTransferFrom = {
 
 }
 
-
 export type MockWitness = {
     value: BigNumberish,
     person: string,
@@ -114,7 +103,7 @@ export type MockWitness = {
 }
 
 export function getCompactPermitSignature(permitSingle: PermitSingle, privateKey: string, domainSeparator: string): Uint8Array {
-    const {v, r, s, vs, compact} = getPermitSignatureSeparated(permitSingle, privateKey, domainSeparator);
+    const {compact} = getPermitSignatureSeparated(permitSingle, privateKey, domainSeparator);
 
     return ethers.utils.concat([compact]);
 }
