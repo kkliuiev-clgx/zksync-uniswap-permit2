@@ -13,10 +13,10 @@ const defaultExpiration: BigNumber = ethers.BigNumber.from(Date.now() + 50000);
 describe("AllowanceTransferInvariants", function () {
     let permit2: Permit2;
     let token: MockERC20;
-    let spender1: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[4].privateKey, provider);
-    let spender2: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[3].privateKey, provider);
-    let permitter1: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[2].privateKey, provider);
-    let permitter2: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[1].privateKey, provider);
+    let spender1: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[3].privateKey, provider);
+    let spender2: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[2].privateKey, provider);
+    let permitter1: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[1].privateKey, provider);
+    let permitter2: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[0].privateKey, provider);
     let defaultNonce: BigNumberish = ethers.constants.Zero;
     let chosePermitter: Wallet;
     let choseSpender: Wallet;

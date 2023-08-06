@@ -25,9 +25,9 @@ describe("AllowanceTransferTest", function () {
     let permit2: Permit2;
     let from: Wallet;
     let fromDirty: Wallet;
-    let spender: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[1].privateKey, provider);
-    let receiver: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[2].privateKey, provider);
-    let address3: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[3].privateKey, provider);
+    let spender: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[0].privateKey, provider);
+    let receiver: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[1].privateKey, provider);
+    let address3: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[2].privateKey, provider);
 
     let defaultAmount: BigNumber = DECIMAL_MULT
     let defaultNonce: BigNumberish = ethers.constants.Zero;
@@ -38,24 +38,19 @@ describe("AllowanceTransferTest", function () {
     let fromPrivateKeyDirty: string;
     let blockTimestamp: BigNumberish;
 
-
     beforeEach(async function () {
-        let l1TimeStamp: number = 0;
-        let l1BatchRange = await provider.getL1BatchBlockRange(await provider.getL1BatchNumber());
-
-        if (l1BatchRange) {
-            l1TimeStamp = (await provider.getBlock(l1BatchRange[1])).l1BatchTimestamp;
-        }
-
-        blockTimestamp = ethers.BigNumber.from(l1TimeStamp + 80000000);
+        const timeStamp = (await provider.getBlock("latest")).timestamp;
+        blockTimestamp = ethers.BigNumber.from(timeStamp + 80000000);
 
         permit2 = <Permit2>await deployContract('Permit2');
 
-        fromPrivateKey = RICH_WALLET_PRIVATE_KEYS[0].privateKey;
-        fromPrivateKeyDirty = RICH_WALLET_PRIVATE_KEYS[5].privateKey;
+        fromPrivateKey = RICH_WALLET_PRIVATE_KEYS[3].privateKey;
+        // There are only 4 rich accounts, so let's create a new one and pop up it.
+        fromPrivateKeyDirty = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
         from = new Wallet(fromPrivateKey, provider);
         fromDirty = new Wallet(fromPrivateKeyDirty, provider);
+        await (await from.transfer({to: fromDirty.address, amount: ethers.utils.parseEther("1.0")})).wait();
 
         token0 = <MockERC20>await deployContract('MockERC20', ["Test0", "TEST0", ethers.BigNumber.from(18)]);
         token1 = <MockERC20>await deployContract('MockERC20', ["Test1", "TEST1", ethers.BigNumber.from(18)]);
@@ -63,9 +58,7 @@ describe("AllowanceTransferTest", function () {
         await mint(from.address, from);
 
         await (await approve(permit2.address, from));
-
         await (await mint(fromDirty.address, fromDirty));
-
         await (await approve(permit2.address, fromDirty));
 
         await (await permit2.connect(fromDirty).invalidateNonces(token0.address, spender.address, dirtyNonce)).wait();
@@ -74,18 +67,15 @@ describe("AllowanceTransferTest", function () {
         await (await mint(receiver.address, receiver));
     });
 
-
     async function mint(address: string, from: Wallet) {
-        await (await (token0.connect(from).mint(address, MINT_AMOUNT_ERC20))).wait();
+        await (await token0.connect(from).mint(address, MINT_AMOUNT_ERC20)).wait();
         await (await (token1.connect(from).mint(address, MINT_AMOUNT_ERC20))).wait();
     }
-
 
     async function approve(address: string, from: Wallet) {
         await (await token0.connect(from).approve(address, ethers.constants.MaxUint256)).wait();
         await (await token1.connect(from).approve(address, ethers.constants.MaxUint256)).wait();
     }
-
 
     describe('Test Approve', function () {
         it('approve should work correct', async function () {
@@ -97,7 +87,6 @@ describe("AllowanceTransferTest", function () {
             expect(result.nonce).to.be.equal(0);
         });
     });
-
 
     describe('Test set allowance', function () {
         it('permit should not revert', async function () {
@@ -114,7 +103,6 @@ describe("AllowanceTransferTest", function () {
         });
     });
 
-
     describe('Test Set Allowance CompactSig', function () {
         it('allowance with compact sig should not revert', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
@@ -130,7 +118,6 @@ describe("AllowanceTransferTest", function () {
         });
     });
 
-
     describe('Test Set Allowance Incorrect Sig Length', function () {
         it('allowance with incorrect sig length should revert', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
@@ -138,10 +125,9 @@ describe("AllowanceTransferTest", function () {
             let signatureExtra: Uint8Array = ethers.utils.concat([signature, [1]]);
             expect(signatureExtra.length).to.be.equal(66);
 
-            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, signatureExtra)).to.be.reverted;
+            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, signatureExtra)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Set Allowance Dirty Write', function () {
         it('allowance dirty write should not revert', async function () {
@@ -157,7 +143,6 @@ describe("AllowanceTransferTest", function () {
             expect(allowanceResult.nonce).to.be.equal(ethers.constants.Two);
         });
     });
-
 
     describe('Test Set Allowance Batch Different Nonces', function () {
         it('AllowanceBatch with different nonces should not revert', async function () {
@@ -223,7 +208,6 @@ describe("AllowanceTransferTest", function () {
         });
     });
 
-
     describe('Test Set Allowance Batch Event', function () {
         it('permit should not revert', async function () {
             let tokens: string[] = [token0.address, token1.address];
@@ -275,7 +259,6 @@ describe("AllowanceTransferTest", function () {
             expect(allowanceBatchResult1.nonce).to.be.equal(ethers.constants.Two);
         });
     });
-
 
     describe('Test SetAllowanceTransfer', function () {
         it('SetAllowanceTransfer should not revert', async function () {
@@ -350,7 +333,6 @@ describe("AllowanceTransferTest", function () {
         });
     });
 
-
     describe('Test Set Allowance Transfer DirtyNonce Dirty Transfer', function () {
         it('transferFrom should not revert', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, dirtyNonce, spender.address, blockTimestamp);
@@ -375,26 +357,23 @@ describe("AllowanceTransferTest", function () {
         });
     });
 
-
     describe('Test Set Allowance Invalid Signature', function () {
         it('permit with invalid signature should revert', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, ethers.constants.AddressZero, blockTimestamp);
             const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
 
-            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.reverted;
+            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Set Allowance Deadline Passed', function () {
         it('permit with passed deadline should revert', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, ethers.constants.Two);
 
             const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.reverted;
+            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Max Allowance', function () {
         it('transferFrom should not revert', async function () {
@@ -421,7 +400,6 @@ describe("AllowanceTransferTest", function () {
         });
     });
 
-
     describe('Test Max Allowance Dirty Write', function () {
         it('max allowance transferFrom should not revert', async function () {
             let maxAllowance = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff');
@@ -443,7 +421,6 @@ describe("AllowanceTransferTest", function () {
             expect(await token0.balanceOf(ethers.constants.AddressZero)).to.be.equal(startBalanceTo.add(defaultAmount));
         });
     });
-
 
     describe('Test Partial Allowance', function () {
         it('Partial Allowance should not reverted', async function () {
@@ -468,7 +445,6 @@ describe("AllowanceTransferTest", function () {
         });
     });
 
-
     describe('Test Reuse Ordered Nonce Invalid', function () {
         it('Reused Ordered Nonce Invalid should reverted', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
@@ -481,10 +457,9 @@ describe("AllowanceTransferTest", function () {
             expect(result.amount).to.be.equal(defaultAmount);
             expect(result.expiration).to.be.equal(defaultExpiration);
 
-            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.reverted;
+            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Invalidate Nonces', function () {
         it('Invalidate Nonces should revert', async function () {
@@ -497,10 +472,9 @@ describe("AllowanceTransferTest", function () {
 
             expect(result.nonce).to.be.equal(1);
 
-            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.reverted;
+            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Invalidate Multiple Nonces', function () {
         it('Invalidate Multiple Nonces should not revert', async function () {
@@ -520,17 +494,15 @@ describe("AllowanceTransferTest", function () {
             result = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
             expect(result.nonce).to.be.equal(ethers.BigNumber.from(33));
 
-            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.reverted;
+            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Invalidate Nonces Invalid', function () {
         it('Invalidate Nonces Invalid should not revert ', async function () {
-            await expect(permit2.connect(fromDirty).invalidateNonces(token0.address, spender.address, ethers.constants.Zero)).to.be.reverted;
+            await expect((await permit2.connect(fromDirty).invalidateNonces(token0.address, spender.address, ethers.constants.Zero)).wait()).to.be.reverted;
         });
     });
-
 
     describe('Test Excessive Invalidation', function () {
         it('ExcessiveInvalidation should not revert', async function () {
@@ -538,14 +510,13 @@ describe("AllowanceTransferTest", function () {
             let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
             let numInvalidate: BigNumberish = ethers.utils.parseUnits('65535', 0);
 
-            await expect(permit2.connect(from).invalidateNonces(token0.address, spender.address, numInvalidate.add(ethers.constants.One))).to.be.reverted;
+            await expect((await permit2.connect(from).invalidateNonces(token0.address, spender.address, numInvalidate.add(ethers.constants.One))).wait()).to.be.reverted;
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
             let result = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
             expect(result.nonce).to.be.equal(ethers.constants.One);
         });
     });
-
 
     describe('Test BatchTransferFrom', function () {
         it('BatchTransferFrom should not revert', async function () {
@@ -576,7 +547,6 @@ describe("AllowanceTransferTest", function () {
             expect(result.amount).to.be.equal(defaultAmount.sub(amount));
         });
     });
-
 
     describe('Test BatchTransferFrom MultiToken', function () {
         it('BatchTransferFrom should not revert', async function () {
@@ -629,7 +599,6 @@ describe("AllowanceTransferTest", function () {
             expect(result1.amount).to.be.equal(defaultAmount.sub(amount));
         });
     });
-
 
     describe('Test BatchTransferFrom Different Owners', function () {
         it('BatchTransferFrom should not revert', async function () {
@@ -684,7 +653,6 @@ describe("AllowanceTransferTest", function () {
         });
     });
 
-
     describe('Test Lockdown', function () {
         it('should pass lockdown test', async function () {
             let tokens: string[] = [token0.address, token1.address];
@@ -735,7 +703,6 @@ describe("AllowanceTransferTest", function () {
             expect(result1.nonce).to.be.equal(ethers.constants.One);
         });
     });
-
 
     describe('Test Lockdown Event', function () {
         it('should pass lockdown', async function () {
