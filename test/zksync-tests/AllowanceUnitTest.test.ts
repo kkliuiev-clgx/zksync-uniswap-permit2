@@ -7,6 +7,9 @@ import {expect} from "./shared/expect";
 
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
 
+function getRandomBigInt(length:number): BigNumber {
+    return ethers.BigNumber.from(ethers.utils.randomBytes(length)).sub(1);
+}
 describe('AllowanceUnitTest', function () {
     const from: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[0].privateKey, provider);
     const spender: Wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[1].privateKey, provider);
@@ -21,10 +24,10 @@ describe('AllowanceUnitTest', function () {
 
     describe('Test Update Amount Expiration Randomly', function () {
         it('should update allowance', async function () {
-            let amount: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
-            let expiration: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
+            let amount: BigNumberish = getRandomBigInt(20);
+            let expiration: BigNumberish = getRandomBigInt(6);
 
-            let allowanceResult = (await permit2.connect(from).allowance(from.address, token.address, spender.address));
+            let allowanceResult = await permit2.connect(from).allowance(from.address, token.address, spender.address);
 
             await (await permit2.mockUpdateAmountAndExpiration(from.address, token.address, spender.address, amount, expiration)).wait();
 
@@ -41,9 +44,9 @@ describe('AllowanceUnitTest', function () {
 
     describe('Test Update All Randomly', function () {
         it('should update randomly', async function () {
-            let amount: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
-            let expiration: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
-            let nonce: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
+            let amount: BigNumberish = getRandomBigInt(20);
+            let expiration: BigNumberish = getRandomBigInt(6);
+            let nonce: BigNumberish = getRandomBigInt(6)
 
             await (await permit2.mockUpdateAll(from.address, token.address, spender.address, amount, expiration, nonce)).wait();
 
@@ -52,7 +55,7 @@ describe('AllowanceUnitTest', function () {
             let timestamp: BigNumberish = (await provider.getBlock("latest")).timestamp;
             let timestampAfterUpdate: BigNumberish = (expiration.eq(ethers.constants.Zero)) ? timestamp : expiration;
 
-            let allowanceResultAfter = (await permit2.connect(from).allowance(from.address, token.address, spender.address));
+            let allowanceResultAfter = await permit2.connect(from).allowance(from.address, token.address, spender.address);
 
             expect(allowanceResultAfter.amount).to.be.equal(amount);
             expect(timestampAfterUpdate).to.be.equal(expiration);
@@ -62,21 +65,21 @@ describe('AllowanceUnitTest', function () {
 
     describe('Test Pack And Unpack', function () {
         it('should pass the pack and unpack', async function () {
-            let amount: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
-            let expiration: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
-            let nonce: BigNumberish = ethers.BigNumber.from(Math.floor(Math.random() * 100 + 1));
+            let amount: BigNumberish = getRandomBigInt(20);
+            let expiration: BigNumberish = getRandomBigInt(6);
+            let nonce: BigNumberish = getRandomBigInt(6)
 
             let word: BigNumberish = (nonce.shl(208)).or(expiration.shl(160).or(amount));
 
             await (await permit2.doStore(from.address, token.address, spender.address, word)).wait();
 
-            let allowanceResultAfter = (await permit2.connect(from).allowance(from.address, token.address, spender.address));
+            let allowanceResultAfter = await permit2.connect(from).allowance(from.address, token.address, spender.address);
 
             expect(allowanceResultAfter.amount).to.be.equal(amount);
             expect(allowanceResultAfter.expiration).to.be.equal(expiration);
             expect(allowanceResultAfter.nonce).to.be.equal(nonce);
 
-            let wordFromStore = (await permit2.getStore(from.address, token.address, spender.address));
+            let wordFromStore = await permit2.getStore(from.address, token.address, spender.address);
 
             expect(wordFromStore).to.be.equal(word);
         });

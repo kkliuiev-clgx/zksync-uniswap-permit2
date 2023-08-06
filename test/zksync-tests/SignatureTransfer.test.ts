@@ -165,7 +165,6 @@ describe("SignatureTransferTest", function () {
                 deadline: ethers.BigNumber.from(Date.now() + 50000)
             };
 
-
             let sig: ethers.utils.BytesLike = getPermitTransferSignature(receiver.address, permit, fromPrivateKey, DOMAIN_SEPARATOR);
             let sigExtra: Uint8Array = ethers.utils.concat([sig, ethers.utils.toUtf8Bytes('123')]);
             expect(sigExtra.length).to.be.equal(68);
@@ -343,10 +342,10 @@ describe("SignatureTransferTest", function () {
                 requestedAmount: ethers.constants.Zero,
                 to: ethers.constants.AddressZero
             },
-            {
-                requestedAmount: defaultAmount,
-                to: ethers.constants.AddressZero
-            }];
+                {
+                    requestedAmount: defaultAmount,
+                    to: ethers.constants.AddressZero
+                }];
 
             let startBalanceFrom0: BigNumberish = await token0.connect(owner).balanceOf(owner.address);
             let startBalanceFrom1: BigNumberish = await token1.connect(owner).balanceOf(owner.address);
@@ -473,7 +472,6 @@ describe("SignatureTransferTest", function () {
                 nonce: await owner.getNonce(),
                 deadline: ethers.BigNumber.from(Date.now() + 5000000)
             };
-
 
             let sig: ethers.utils.BytesLike = getPermitBatchTransferSignature(spender.address, permit, fromPrivateKey, DOMAIN_SEPARATOR);
             let toAmountPairs: SignatureTransferDetails[] = [{requestedAmount: defaultAmount, to: spender.address}];

@@ -19,17 +19,14 @@ const chai = require("chai")
 chai.use(solidity)
 
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
-
 class MockWitness {
     constructor(person: string, amount: BigNumber) {
         this.person = person;
         this.amount = amount;
     }
-
     person: string;
     amount: BigNumber;
 }
-
 describe('TypehashGeneration', function () {
     const WITNESS_TYPE_HASH = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MockWitness(address person,uint256 amount)"));
     const PRIVATE_KEY_OWNER = RICH_WALLET_PRIVATE_KEYS[0].privateKey;
@@ -66,28 +63,23 @@ describe('TypehashGeneration', function () {
         wallet = new Wallet("0x7726827caac94a7f9e1b160f7ea819f172f7b6f9d2a97f992c38edeab82d4110", provider);
         person = "0xd5F5175D014F28c85F7D67A111C2c9335D7CD771";
     });
-
     function buildDomainSeparator(): string {
         const nameHash: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("Permit2"));
         const typeHash: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
-
         const domainSeparator: string = ethers.utils.keccak256(
             ethers.utils.defaultAbiCoder.encode(
                 ["bytes32", "bytes32", "uint256", "address"],
                 [typeHash, nameHash, chainId, verifyingContract]
             )
         );
-
         return domainSeparator;
     }
-
     function hashTypedWitness(typehash: string, typedWitness: MockWitness): string {
         const encodedWitness = ethers.utils.defaultAbiCoder.encode(
             ['bytes32', 'address', 'uint256'],
             [typehash, typedWitness.person, typedWitness.amount]);
         return ethers.utils.keccak256(encodedWitness);
     }
-
     async function getLocalSingleWitnessHash(amountToHash: BigNumber, typehashStub: string) {
         let permitTransferFrom: PermitTransferFrom = {
             permitted: {
@@ -110,11 +102,9 @@ describe('TypehashGeneration', function () {
             )
         );
     }
-
     async function getLocalBatchedWitnessHash(amountToHash: BigNumber, typehashStub: string) {
         let witness: MockWitness = new MockWitness(person, amount);
         let hashedWitness = hashTypedWitness(WITNESS_TYPE_HASH, witness);
-
         let permitted: TokenPermissions[] = [];
         permitted.push({
             token: token1,
@@ -141,7 +131,6 @@ describe('TypehashGeneration', function () {
         );
     }
 
-
     describe('TestPermitSingle', function () {
         it('should not revert, validating that from is indeed the signer ', async function () {
             const details: PermitDetails = {
@@ -167,7 +156,6 @@ describe('TypehashGeneration', function () {
             );
 
             await expect(hashLib.verify(signDigest(hashedPermit, PRIVATE_KEY_OWNER), hashedPermit, ethers.utils.computeAddress(PRIVATE_KEY_OWNER))).to.be.not.reverted
-
         });
     });
 
@@ -208,7 +196,6 @@ describe('TypehashGeneration', function () {
                     ["\x19\x01", DOMAIN_SEPARATOR, permitHash]
                 )
             );
-
             await expect(hashLib.connect(wallet).verify(ethers.utils.hexlify(sig), hashedPermit, from)).to.be.not.reverted;
         });
     });
@@ -223,7 +210,6 @@ describe('TypehashGeneration', function () {
                 nonce: nonce,
                 deadline: sigDeadline
             };
-
             const permitHash = await hashLib.connect(wallet).hashPermitTransferFrom(permit);
 
             const hashedPermit = ethers.utils.keccak256(
@@ -264,11 +250,9 @@ describe('TypehashGeneration', function () {
                     ["\x19\x01", DOMAIN_SEPARATOR, permitBatchTransferFromHash]
                 )
             );
-
             await expect(hashLib.verify(signDigest(hashedPermit, PRIVATE_KEY_OWNER), hashedPermit, ethers.utils.computeAddress(PRIVATE_KEY_OWNER))).to.be.not.reverted;
         });
     });
-
 
     describe('TestPermitTransferFromWithWitness', async function () {
         it('should not revert, validating that from is indeed the signer', async function () {
@@ -288,7 +272,6 @@ describe('TypehashGeneration', function () {
         });
     });
 
-
     describe('Test Permit Transfer From With Witness Incorrect Permit Data', async function () {
         it('should not revert, validating that from is indeed the signer', async function () {
             const WITNESS_TYPE_STRING_STUB: string = "MockWitness witness)MockWitness(address person,uint256 amount)TokenPermissions(address token,uint256 amount)";
@@ -298,7 +281,6 @@ describe('TypehashGeneration', function () {
             await expect(hashLib.verify(signDigest(hashedPermit, PRIVATE_KEY_OWNER), hashedPermit, ethers.utils.computeAddress(PRIVATE_KEY_OWNER))).to.be.not.reverted;
         });
     });
-
 
     describe('Test Permit Batch Transfer From With Witness', async function () {
         it('should not revert, validating that from is indeed the signer', async function () {
