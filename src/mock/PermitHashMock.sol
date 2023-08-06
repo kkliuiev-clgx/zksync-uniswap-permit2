@@ -59,6 +59,4 @@ contract PermitHashMock {
     function verify(bytes calldata sig, bytes32 hashed, address signer) public view {
         SignatureVerification.verify(sig, hashed, signer);
     }
-
-
 }
