@@ -13,6 +13,7 @@ import {
     SignatureTransferDetails,
     TokenPermissions
 } from "./utils/PermitSignature";
+import exp from "constants";
 
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
 
@@ -746,7 +747,7 @@ describe("SignatureTransferTest", function () {
             let bitmap: BigNumberish = await permit2.connect(owner).nonceBitmap(owner.address, nonce);
             expect(bitmap).to.be.equals(ethers.constants.Zero);
 
-            await (await permit2.connect(owner).invalidateUnorderedNonces(nonce, 1)).wait();
+            await expect(permit2.connect(owner).invalidateUnorderedNonces(nonce, 1)).to.emit(permit2, "UnorderedNonceInvalidation").withArgs(owner.address, nonce, 1);
             bitmap = await permit2.connect(owner).nonceBitmap(owner.address, nonce);
             expect(bitmap).to.be.equals(ethers.constants.One);
 

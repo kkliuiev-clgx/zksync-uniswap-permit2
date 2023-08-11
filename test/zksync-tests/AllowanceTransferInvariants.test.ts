@@ -39,15 +39,12 @@ describe("AllowanceTransferInvariants", function () {
     describe("Spend Never Exceeds Permit", function () {
         it('spent should not exceeds permitted', async function () {
             let permitted: BigNumber = DECIMAL_MULT;
-
             let permit: PermitSingle = buildPermitSingle(token.address, permitted, defaultExpiration, defaultNonce, choseSpender.address, 2000000000);
-
             let startBalanceFrom: BigNumberish = await token.connect(chosePermitter).balanceOf(chosePermitter.address);
 
             const sign: Uint8Array = getCompactPermitSignature(permit, chosePermitter.privateKey, await permit2.DOMAIN_SEPARATOR());
 
             await (await permit2.connect(chosePermitter)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](chosePermitter.address, permit, sign)).wait();
-
             await (await permit2.connect(choseSpender)["transferFrom(address,address,uint160,address)"](chosePermitter.address, choseSpender.address, permitted, token.address)).wait();
 
             expect(await token.connect(choseSpender).balanceOf(choseSpender.address)).to.be.equal(permitted);

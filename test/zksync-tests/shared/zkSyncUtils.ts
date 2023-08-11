@@ -2,10 +2,11 @@ import { Provider, Contract, Wallet } from 'zksync-web3'
 import { Deployer } from '@matterlabs/hardhat-zksync-deploy'
 import * as hre from 'hardhat'
 import * as fs from 'fs'
+import {HttpNetworkConfig} from "hardhat/types";
 
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync(`test/zksync-tests/shared/rich-wallets.json`, 'utf8'))
 
-export const provider = new Provider(hre.network.config.url)
+export const provider = new Provider((hre.network.config as HttpNetworkConfig).url)
 
 const wallet = new Wallet(RICH_WALLET_PRIVATE_KEYS[0].privateKey, provider)
 const deployer = new Deployer(hre, wallet)

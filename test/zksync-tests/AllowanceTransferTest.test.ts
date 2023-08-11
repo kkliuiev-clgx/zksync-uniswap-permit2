@@ -79,7 +79,7 @@ describe("AllowanceTransferTest", function () {
 
     describe('Test Approve', function () {
         it('approve should work correct', async function () {
-            await expect(permit2.connect(from).approve(token0.address, spender.address, defaultAmount, defaultExpiration)).to.emit(permit2, "Approval");
+            await expect(permit2.connect(from).approve(token0.address, spender.address, defaultAmount, defaultExpiration)).to.emit(permit2, "Approval").withArgs(from.address, token0.address, spender.address, defaultAmount, defaultExpiration);
 
             let result = await permit2.allowance(from.address, token0.address, spender.address);
             expect(result.amount).to.be.equal(defaultAmount);
@@ -220,7 +220,7 @@ describe("AllowanceTransferTest", function () {
 
             const sign: string = getPermitBatchSignature(permitBatch, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
-            await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](from.address, permitBatch, sign)).wait();
+            await expect(await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](from.address, permitBatch, sign)).to.emit(permit2, "Permit").withArgs(from.address, tokens[0], spender.address, defaultAmount, defaultExpiration, defaultNonce).to.emit(permit2, "Permit").withArgs(from.address, tokens[1], spender.address, defaultAmount, defaultExpiration, defaultNonce);
 
             let allowanceBatchResult0 = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(allowanceBatchResult0.amount).to.be.equal(defaultAmount);
@@ -347,7 +347,7 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(fromDirty)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](fromDirty.address, permitSingle, sign)).wait();
 
-            let allowanceResult = await (await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address));
+            let allowanceResult = await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address);
             expect(allowanceResult.amount).to.be.equal(defaultAmount);
 
             await (await permit2.connect(spender)["transferFrom(address,address,uint160,address)"](fromDirty.address, address3.address, defaultAmount, token0.address)).wait();
@@ -466,7 +466,7 @@ describe("AllowanceTransferTest", function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
             let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
-            await (await permit2.connect(from).invalidateNonces(token0.address, spender.address, ethers.BigNumber.from(1))).wait();
+            await expect(await permit2.connect(from).invalidateNonces(token0.address, spender.address, ethers.BigNumber.from(1))).to.emit(permit2, "NonceInvalidation").withArgs(from.address, token0.address, spender.address, ethers.BigNumber.from(1), defaultNonce);
 
             let result = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
 
@@ -489,7 +489,7 @@ describe("AllowanceTransferTest", function () {
             permitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, result.nonce, spender.address, blockTimestamp);
             sign = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
 
-            await (await permit2.connect(from).invalidateNonces(token0.address, spender.address, ethers.BigNumber.from(33))).wait();
+            await expect(await permit2.connect(from).invalidateNonces(token0.address, spender.address, ethers.BigNumber.from(33))).to.emit(permit2, "NonceInvalidation").withArgs(from.address, token0.address, spender.address, ethers.BigNumber.from(33), result.nonce);
 
             result = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(result.nonce).to.be.equal(ethers.BigNumber.from(33));
@@ -739,7 +739,7 @@ describe("AllowanceTransferTest", function () {
                 token: token1.address,
                 spender: spender.address
             });
-            await expect(permit2.connect(from).lockdown(approvals)).to.emit(permit2, "Lockdown");
+            await expect(permit2.connect(from).lockdown(approvals)).to.emit(permit2, "Lockdown").withArgs(from.address, token0.address, spender.address);
 
             result0 = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(result0.amount).to.be.equal(ethers.constants.Zero);
