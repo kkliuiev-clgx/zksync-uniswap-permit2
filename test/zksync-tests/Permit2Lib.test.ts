@@ -1,7 +1,5 @@
-import {BigNumber, Contract, ethers} from "ethers";
+import {BigNumber, ethers} from "ethers";
 import {Wallet} from "zksync-web3";
-import {Deployer} from '@matterlabs/hardhat-zksync-deploy'
-import * as hre from 'hardhat'
 import {
     MockERC20,
     MockNonPermitERC20,
@@ -11,7 +9,7 @@ import {
     MockPermit2LibTest,
     MockNonPermitNonERC20WithDS, MockSafeERC20
 } from "../../typechain-types";
-import {deployContract, provider} from "./shared/zkSyncUtils";
+import {deployContract, provider, walletDeployContract} from "./shared/zkSyncUtils";
 import fs from "fs";
 import {expect} from "./shared/expect";
 import {
@@ -70,18 +68,10 @@ describe('Permit2Lib', function () {
 
     before(async function () {
         let permit2Address = '0x28D81506519D32a212fB098658abf4a9CCe60d59'; //precalculated
-        let deployer = new Deployer(hre, PERMIT_DEPLOYER)
-        let Permit2 = await deployer.loadArtifact("Permit2")
-        let code = await provider.getCode(permit2Address);
+        permit2 = <Permit2> await walletDeployContract(PERMIT_DEPLOYER,'Permit2');
 
-        if (code.length == 2) {
-            await (await PK_OWNER.transfer({
-                to: PERMIT_DEPLOYER.address,
-                amount: ethers.utils.parseEther("1.0"),
-            })).wait();
-            permit2 = await deployer.deploy(Permit2, []) as Permit2
-        } else {
-            permit2 = new Contract(permit2Address, Permit2.abi, PK_OWNER) as Permit2
+        if (permit2Address != permit2.address) {
+            permit2 = await permit2.attach(permit2Address);
         }
 
         permit2Lib = <MockPermit2LibTest>await deployContract("MockPermit2LibTest");
@@ -122,7 +112,7 @@ describe('Permit2Lib', function () {
     });
 
     beforeEach(async function () {
-        let timestamp = (await provider.getBlock('latest')).timestamp;
+        let timestamp: number = (await provider.getBlock('latest')).timestamp;
         blockTimestamp = ethers.BigNumber.from(timestamp + 80000000);
 
         let allowanceBefore = await permit2.connect(wallet).allowance(PK_OWNER.address, token.address, CAFE.address);

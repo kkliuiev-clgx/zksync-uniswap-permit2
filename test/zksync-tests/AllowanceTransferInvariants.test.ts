@@ -20,9 +20,12 @@ describe("AllowanceTransferInvariants", function () {
     let defaultNonce: BigNumberish = ethers.constants.Zero;
     let chosePermitter: Wallet;
     let choseSpender: Wallet;
+    let blockTimestamp: BigNumberish;
 
 
     beforeEach(async function () {
+        const timeStamp = (await provider.getBlock("latest")).timestamp;
+        blockTimestamp = ethers.BigNumber.from(timeStamp + 80000000);
         permit2 = <Permit2>await deployContract('Permit2');
         token = <MockERC20>await deployContract('MockERC20', ["Test0", "TEST0", ethers.BigNumber.from(18)]);
 
@@ -39,7 +42,7 @@ describe("AllowanceTransferInvariants", function () {
     describe("Spend Never Exceeds Permit", function () {
         it('spent should not exceeds permitted', async function () {
             let permitted: BigNumber = DECIMAL_MULT;
-            let permit: PermitSingle = buildPermitSingle(token.address, permitted, defaultExpiration, defaultNonce, choseSpender.address, 2000000000);
+            let permit: PermitSingle = buildPermitSingle(token.address, permitted, defaultExpiration, defaultNonce, choseSpender.address, blockTimestamp);
             let startBalanceFrom: BigNumberish = await token.connect(chosePermitter).balanceOf(chosePermitter.address);
 
             const sign: Uint8Array = getCompactPermitSignature(permit, chosePermitter.privateKey, await permit2.DOMAIN_SEPARATOR());
@@ -56,7 +59,7 @@ describe("AllowanceTransferInvariants", function () {
     describe("Balance Equals Spent", function () {
         it('balance should equals spent', async function () {
             let permitted: BigNumber = DECIMAL_MULT;
-            let permit: PermitSingle = buildPermitSingle(token.address, permitted, defaultExpiration, defaultNonce, choseSpender.address, 2000000000)
+            let permit: PermitSingle = buildPermitSingle(token.address, permitted, defaultExpiration, defaultNonce, choseSpender.address, blockTimestamp)
 
             let startBalanceFrom: BigNumberish = await token.connect(chosePermitter).balanceOf(chosePermitter.address);
 

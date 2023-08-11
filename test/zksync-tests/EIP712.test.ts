@@ -14,7 +14,7 @@ describe("EIP712", function () {
 
     describe("Test Domain Separator", function () {
         beforeEach('Deploy Permit2', async () => {
-            permit2 = await deployContract('Permit2') as Permit2;
+            permit2 = <Permit2> await deployContract('Permit2');
             EIP712WithCustomChainID = await deployContract('MockEIP712WithCustomChainID') as MockEIP712WithCustomChainID;
         });
 
@@ -44,7 +44,7 @@ describe("EIP712", function () {
                     )
                 );
 
-                let newDomainSeparator = await (await EIP712WithCustomChainID.connect(owner).DOMAIN_SEPARATOR());
+                let newDomainSeparator = await EIP712WithCustomChainID.connect(owner).DOMAIN_SEPARATOR();
                 await expect(newDomainSeparator).to.be.equal(expectedDomainSeparator);
             });
         });

@@ -170,12 +170,12 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](from.address, permitBatch, signatureBatch)).wait();
 
-            let allowanceBatchResult0 = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
+            let allowanceBatchResult0 = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(allowanceBatchResult0.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult0.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult0.nonce).to.be.equal(ethers.constants.Two);
 
-            let allowanceBatchResult1 = await (await permit2.connect(from).allowance(from.address, token1.address, spender.address));
+            let allowanceBatchResult1 = await permit2.connect(from).allowance(from.address, token1.address, spender.address);
             expect(allowanceBatchResult1.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult1.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult1.nonce).to.be.equal(ethers.constants.One);
@@ -196,12 +196,12 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](from.address, permitBatch, sign)).wait();
 
-            let allowanceBatchResult0 = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
+            let allowanceBatchResult0 =  await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(allowanceBatchResult0.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult0.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult0.nonce).to.be.equal(ethers.constants.One);
 
-            let allowanceBatchResult1 = await (await permit2.connect(from).allowance(from.address, token1.address, spender.address));
+            let allowanceBatchResult1 =  await permit2.connect(from).allowance(from.address, token1.address, spender.address);
             expect(allowanceBatchResult1.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult1.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult1.nonce).to.be.equal(ethers.constants.One);
@@ -270,7 +270,7 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
-            let allowanceResult = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
+            let allowanceResult =  await permit2.connect(from).allowance(from.address, token0.address, spender.address);
 
             expect(allowanceResult.amount).to.be.equal(defaultAmount);
 
@@ -291,7 +291,7 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
-            let allowanceResult = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
+            let allowanceResult = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(allowanceResult.amount).to.be.equal(defaultAmount);
 
             await (await permit2.connect(spender)["transferFrom(address,address,uint160,address)"](from.address, ethers.constants.AddressZero, defaultAmount, token0.address)).wait();
@@ -410,11 +410,11 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(fromDirty)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](fromDirty.address, permitSingle, sign)).wait();
 
-            let startAllowedAmount0 = (await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address));
+            let startAllowedAmount0 = await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address);
             expect(startAllowedAmount0.amount).to.be.equal(maxAllowance)
             await (await permit2.connect(spender)["transferFrom(address,address,uint160,address)"](fromDirty.address, ethers.constants.AddressZero, defaultAmount, token0.address)).wait();
 
-            let endAllowedAmount0 = (await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address));
+            let endAllowedAmount0 = await permit2.connect(fromDirty).allowance(fromDirty.address, token0.address, spender.address);
             expect(endAllowedAmount0.amount).to.be.equal(maxAllowance)
 
             expect(await token0.balanceOf(fromDirty.address)).to.be.equal(startBalanceFrom.sub(defaultAmount));
@@ -433,7 +433,7 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
-            let startAllowedAmount0 = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
+            let startAllowedAmount0 = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(startAllowedAmount0.amount).to.be.equal(defaultAmount);
             await (await permit2.connect(spender)["transferFrom(address,address,uint160,address)"](from.address, ethers.constants.AddressZero, transferAmount, token0.address)).wait();
 
@@ -468,7 +468,7 @@ describe("AllowanceTransferTest", function () {
 
             await expect(await permit2.connect(from).invalidateNonces(token0.address, spender.address, ethers.BigNumber.from(1))).to.emit(permit2, "NonceInvalidation").withArgs(from.address, token0.address, spender.address, ethers.BigNumber.from(1), defaultNonce);
 
-            let result = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
+            let result = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
 
             expect(result.nonce).to.be.equal(1);
 
@@ -513,7 +513,7 @@ describe("AllowanceTransferTest", function () {
             await expect((await permit2.connect(from).invalidateNonces(token0.address, spender.address, numInvalidate.add(ethers.constants.One))).wait()).to.be.reverted;
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
-            let result = await (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
+            let result = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(result.nonce).to.be.equal(ethers.constants.One);
         });
     });
@@ -692,12 +692,12 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(from).lockdown(approvals)).wait();
 
-            result0 = (await permit2.connect(from).allowance(from.address, token0.address, spender.address));
+            result0 = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(result0.amount).to.be.equal(ethers.constants.Zero);
             expect(result0.expiration).to.be.equal(defaultExpiration);
             expect(result0.nonce).to.be.equal(ethers.constants.One);
 
-            result1 = (await permit2.connect(from).allowance(from.address, token1.address, spender.address));
+            result1 = await permit2.connect(from).allowance(from.address, token1.address, spender.address);
             expect(result1.amount).to.be.equal(ethers.constants.Zero);
             expect(result1.expiration).to.be.equal(defaultExpiration);
             expect(result1.nonce).to.be.equal(ethers.constants.One);
