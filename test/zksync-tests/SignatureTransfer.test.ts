@@ -13,7 +13,6 @@ import {
     SignatureTransferDetails,
     TokenPermissions
 } from "./utils/PermitSignature";
-import exp from "constants";
 
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
 
@@ -172,7 +171,7 @@ describe("SignatureTransferTest", function () {
 
             let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
 
-            await expect((await permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sigExtra)).wait()).to.be.reverted;
+            await expect(permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sigExtra)).to.be.revertedWithCustomError(permit2, "InvalidSignatureLength");
 
         });
     });
@@ -205,7 +204,6 @@ describe("SignatureTransferTest", function () {
 
     describe('Test Permit TransferFrom Invalid Nonce', function () {
         it('should revert transferFrom with invalid nonce ', async function (): Promise<void> {
-
             let permit: PermitTransferFrom = {
                 permitted: {
                     token: token0.address,
@@ -220,7 +218,7 @@ describe("SignatureTransferTest", function () {
             let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
             await (await permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).wait();
 
-            await expect((await permit2.connect(owner)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).wait()).to.be.reverted;
+            await expect(permit2.connect(owner)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
 
@@ -429,7 +427,6 @@ describe("SignatureTransferTest", function () {
     describe('Test PermitBatch Transfer Single Recipient Many Tokens', function () {
         it('should correct work permitBatch single recipient many tokens ', async function () {
             await (await (token0.connect(owner).mint(owner.address, defaultAmount.mul(ethers.BigNumber.from(12))))).wait();
-
             let tokenPermissions: TokenPermissions[] = [];
             for (let i: number = 0; i < 10; i++) {
                 tokenPermissions.push({token: token0.address, amount: defaultAmount});
@@ -461,7 +458,6 @@ describe("SignatureTransferTest", function () {
     describe('Test PermitBatchTransfer Invalid Amounts Length Mismatch', function () {
         it('should revert permitBatch invalid amounts length mismatch ', async function () {
             let tokens: string[] = [token0.address, token0.address];
-
             let tokenPermissions: TokenPermissions[] = [];
 
             for (let i: number = 0; i < tokens.length; i++) {
@@ -477,7 +473,7 @@ describe("SignatureTransferTest", function () {
             let sig: ethers.utils.BytesLike = getPermitBatchTransferSignature(spender.address, permit, fromPrivateKey, DOMAIN_SEPARATOR);
             let toAmountPairs: SignatureTransferDetails[] = [{requestedAmount: defaultAmount, to: spender.address}];
 
-            await expect((await permit2.connect(owner)["permitTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes)"](permit, toAmountPairs, owner.address, sig)).wait()).to.be.reverted;
+            await expect(permit2.connect(owner)["permitTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes)"](permit, toAmountPairs, owner.address, sig)).to.be.revertedWithCustomError(permit2, "LengthMismatch");
         });
     });
 
@@ -529,9 +525,7 @@ describe("SignatureTransferTest", function () {
 
     describe('Test Gas Multiple PermitBatchTransferFrom', function () {
         it('should work multiple permitBatchTransferFrom ', async function () {
-
             let tokens: string[] = [token0.address, token1.address, token1.address];
-
             let tokenPermissions: TokenPermissions[] = [];
 
             for (let i: number = 0; i < tokens.length; i++) {
@@ -650,7 +644,7 @@ describe("SignatureTransferTest", function () {
                 to: to[0]
             }, {requestedAmount: defaultAmount, to: to[1]}];
 
-            await expect((await permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"](permit, toAmountPairs, owner.address, witness, "fake type", sig)).wait()).to.be.reverted;
+            await expect(permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"](permit, toAmountPairs, owner.address, witness, "fake type", sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
     });
 
@@ -688,9 +682,7 @@ describe("SignatureTransferTest", function () {
                 to: to[0]
             }, {requestedAmount: defaultAmount, to: to[1]}];
 
-            await expect((await permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"]
-            (permit, toAmountPairs, owner.address, witness, WITNESS_TYPE_STRING, sig)).wait()).to.be.reverted;
-
+            await expect(permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"](permit, toAmountPairs, owner.address, witness, WITNESS_TYPE_STRING, sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
     });
 
@@ -725,8 +717,7 @@ describe("SignatureTransferTest", function () {
                 to: to[0]
             }, {requestedAmount: defaultAmount, to: to[1]}];
 
-            await expect((await permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"](permit, toAmountPairs, owner.address,
-                ethers.utils.keccak256(ethers.utils.solidityPack(['bytes32'], [ethers.utils.formatBytes32String("bad witness")])), WITNESS_TYPE_STRING, sig)).wait()).to.be.reverted;
+            await expect(permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"](permit, toAmountPairs, owner.address, ethers.utils.keccak256(ethers.utils.solidityPack(['bytes32'], [ethers.utils.formatBytes32String("bad witness")])), WITNESS_TYPE_STRING, sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
     });
 
@@ -753,7 +744,7 @@ describe("SignatureTransferTest", function () {
 
             let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
 
-            await expect((await permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).wait()).to.be.reverted;
+            await expect(permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
 
@@ -815,8 +806,7 @@ describe("SignatureTransferTest", function () {
             );
             let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
 
-            await expect((await permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)"]
-            (permit, transferDetails, owner.address, witness, ethers.utils.formatBytes32String("fake typedef"), sig)).wait()).to.be.reverted;
+            await expect(permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)"](permit, transferDetails, owner.address, witness, ethers.utils.formatBytes32String("fake typedef"), sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
     });
 
@@ -841,7 +831,7 @@ describe("SignatureTransferTest", function () {
             let sig: ethers.utils.BytesLike = getPermitWitnessTransferSignature(receiver.address, permit, fromPrivateKey, ethers.utils.formatBytes32String("fake typehash"), witness, DOMAIN_SEPARATOR);
             let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
 
-            await expect((await permit2.connect(owner)["permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)"](permit, transferDetails, owner.address, witness, WITNESS_TYPE_STRING, sig)).wait()).to.be.reverted;
+            await expect(permit2.connect(owner)["permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)"](permit, transferDetails, owner.address, witness, WITNESS_TYPE_STRING, sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
     });
 });

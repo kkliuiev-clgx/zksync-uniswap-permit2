@@ -19,30 +19,21 @@ import {
     signDigestSeparate
 } from "./utils/PermitSignature";
 
-
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
-
 const _PERMIT_DETAILS_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"));
-
 const UINT48_MAX: BigNumber = ethers.BigNumber.from(281474976710655);
 const UINT160_MAX: BigNumber = ethers.BigNumber.from(2).pow(ethers.BigNumber.from(160)).sub(1);
 const DECIMAL_MULT: BigNumber = ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18));
-
 const PERMIT_DEPLOYER_PK: string = '0x7f2f89394abc81f86bf66c81852b9f203a329e4b89af8cd7177807f0178a5e12'
 const PERMIT_DEPLOYER: Wallet = new Wallet(PERMIT_DEPLOYER_PK, provider);
-
 const PK = RICH_WALLET_PRIVATE_KEYS[0].privateKey;
 const PK_OWNER: Wallet = new Wallet(PK, provider);
-
 const CAFE_PK = RICH_WALLET_PRIVATE_KEYS[1].privateKey;
 const CAFE: Wallet = new Wallet(CAFE_PK, provider);
-
 const BOB_PK = RICH_WALLET_PRIVATE_KEYS[2].privateKey;
 const BOB: Wallet = new Wallet(BOB_PK, provider);
-
 const wallet_PK = RICH_WALLET_PRIVATE_KEYS[3].privateKey;
 const wallet: Wallet = new Wallet(wallet_PK, provider);
-
 const DECIMALS: BigNumber = ethers.BigNumber.from(18);
 
 describe('Permit2Lib', function () {
@@ -68,7 +59,7 @@ describe('Permit2Lib', function () {
 
     before(async function () {
         let permit2Address = '0x28D81506519D32a212fB098658abf4a9CCe60d59'; //precalculated
-        permit2 = <Permit2> await walletDeployContract(PERMIT_DEPLOYER,'Permit2');
+        permit2 = <Permit2>await walletDeployContract(PERMIT_DEPLOYER, 'Permit2');
 
         if (permit2Address != permit2.address) {
             permit2 = await permit2.attach(permit2Address);
@@ -130,7 +121,6 @@ describe('Permit2Lib', function () {
             (sign.s)
         )).wait();
 
-        // test Permit2 Non Permit Token
         let allowanceMiddle = await permit2.connect(wallet).allowance(PK_OWNER.address, nonPermitToken.address, CAFE.address);
 
         permitSingle = buildPermitSingle(nonPermitToken.address, DECIMAL_MULT, UINT48_MAX, allowanceMiddle.nonce, CAFE.address, blockTimestamp);
@@ -213,7 +203,7 @@ describe('Permit2Lib', function () {
             const sign = getPermitSignatureSeparated(permit, PK, PERMIT2_DOMAIN_SEPARATOR);
             let amount: BigNumber = ethers.BigNumber.from(2).pow(170);
 
-            await expect((await permit2Lib.connect(wallet).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, amount, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait()).to.be.reverted;
+            await expect(permit2Lib.connect(wallet).permit2(nonPermitToken.address, PK_OWNER.address, CAFE.address, amount, blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).to.be.revertedWithCustomError(permit2Lib, "UnsafeCast");
         });
     });
 
@@ -311,7 +301,7 @@ describe('Permit2Lib', function () {
 
             const sign = signDigestSeparate(message, PK);
 
-            await expect((await permit2Lib.connect(wallet).permit2(largeDSToken.address, PK_OWNER.address, CAFE.address, ethers.BigNumber.from(10000), blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).wait()).to.be.reverted;
+            await expect(permit2Lib.connect(wallet).permit2(largeDSToken.address, PK_OWNER.address, CAFE.address, ethers.BigNumber.from(10000), blockTimestamp, ethers.BigNumber.from(sign.v), sign.r, sign.s)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
     });
 
@@ -356,7 +346,7 @@ describe('Permit2Lib', function () {
     describe('Test TransferFrom2 InvalidAmount', function () {
         it('TransferFrom2 with invalid amount should revert', async function () {
             await (await token.connect(PK_OWNER).approve(CAFE.address, ethers.constants.MaxUint256)).wait();
-            await expect((await permit2Lib.connect(CAFE).transferFrom2(token.address, PK_OWNER.address, CAFE.address, ethers.constants.Two.pow(170))).wait()).to.be.reverted;
+            await expect(permit2Lib.connect(CAFE).transferFrom2(token.address, PK_OWNER.address, CAFE.address, ethers.constants.Two.pow(170))).to.be.revertedWithCustomError(permit2Lib, "UnsafeCast");
         });
     });
 

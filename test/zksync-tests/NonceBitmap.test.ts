@@ -26,9 +26,9 @@ describe('NonceBitmap', function () {
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).wait();
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).wait();
 
-            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).wait()).to.be.reverted;
-            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(5))).wait()).to.be.reverted;
-            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).wait()).to.be.reverted;
+            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
+            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(5))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
+            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
 
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(4))).wait();
         });
@@ -39,36 +39,33 @@ describe('NonceBitmap', function () {
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).wait();
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).wait();
 
-            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).wait()).to.be.reverted;
-            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).wait()).to.be.reverted;
+            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
+            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
-
 
     describe('Test High Nonces', function () {
         it('should fail 3', async function () {
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(2).pow(240))).wait();
             await (await permit2.connect(spender).useUnorderedNonce(spender.address, (ethers.BigNumber.from(2).pow(240)).add(ethers.constants.One))).wait();
 
-            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(2).pow(240))).wait()).to.be.reverted;
-            await expect((await permit2.connect(spender).useUnorderedNonce(spender.address, (ethers.BigNumber.from(2).pow(240)).add(ethers.constants.One))).wait()).to.be.reverted;
+            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, ethers.BigNumber.from(2).pow(240))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
+            await expect(permit2.connect(spender).useUnorderedNonce(spender.address, (ethers.BigNumber.from(2).pow(240)).add(ethers.constants.One))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
-
 
     describe('Test Invalidate Full Word', function () {
         it('should fail 4', async function () {
             await (await permit2.connect(spender).invalidateUnorderedNonces(ethers.constants.Zero, ethers.constants.Two.pow(256).sub(ethers.constants.One))).wait();
 
-            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).wait()).to.be.reverted;
-            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).wait()).to.be.reverted;
-            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(254))).wait()).to.be.reverted;
-            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).wait()).to.be.reverted;
+            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(0))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
+            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(1))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
+            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(254))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
+            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
 
             await (await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).wait()
         });
     });
-
 
     describe('Test Invalidate Non zero Word', function () {
         it('should fail 5', async function () {
@@ -78,23 +75,21 @@ describe('NonceBitmap', function () {
             await (await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(254))).wait();
             await (await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(255))).wait();
 
-            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).wait()).to.be.reverted;
-            await expect((await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(511))).wait()).to.be.reverted;
+            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(256))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
+            await expect(permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(511))).to.be.revertedWithCustomError(permit2, "InvalidNonce");
 
             await (await permit2.useUnorderedNonce(spender.address, ethers.BigNumber.from(512))).wait();
         });
     });
-
 
     describe('Test Using Nonce Twice Fails', function () {
         it('should fail 6', async function () {
             let nonce: BigNumberish = getRandomBigInt();
             await (await permit2.useUnorderedNonce(spender.address, nonce)).wait();
 
-            await expect((await permit2.useUnorderedNonce(spender.address, nonce)).wait()).to.be.reverted;
+            await expect(permit2.useUnorderedNonce(spender.address, nonce)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
-
 
     describe('Test Use TwoRandom Nonces', function () {
         it('should fail 7', async function () {
@@ -104,13 +99,12 @@ describe('NonceBitmap', function () {
             await (await permit2.useUnorderedNonce(spender.address, first)).wait();
 
             if (first == second) {
-                await expect((await permit2.useUnorderedNonce(spender.address, second)).wait()).to.be.reverted;
+                await expect(permit2.useUnorderedNonce(spender.address, second)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
             } else {
                 await (await permit2.useUnorderedNonce(spender.address, second)).wait();
             }
         });
     });
-
 
     describe('Test Invalidate Nonces Randomly', function () {
         it('should 8', async function () {
@@ -121,7 +115,6 @@ describe('NonceBitmap', function () {
             expect(await permit2.connect(spender).nonceBitmap(spender.address, wordPos)).to.be.equal(mask);
         });
     });
-
 
     describe('Test Invalidate Two Nonces Randomly', function () {
         it('should 9', async function () {

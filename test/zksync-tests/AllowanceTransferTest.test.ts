@@ -1,4 +1,4 @@
-import {MockERC20, Permit2} from "../../typechain-types";
+import {MockERC20, Permit2, SignatureVerification__factory} from "../../typechain-types";
 import {deployContract, provider} from "./shared/zkSyncUtils";
 import {Wallet} from "zksync-web3";
 import fs from "fs";
@@ -124,8 +124,7 @@ describe("AllowanceTransferTest", function () {
             let signature: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
             let signatureExtra: Uint8Array = ethers.utils.concat([signature, [1]]);
             expect(signatureExtra.length).to.be.equal(66);
-
-            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, signatureExtra)).wait()).to.be.reverted;
+            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, signatureExtra)).to.be.revertedWithCustomError(permit2, "InvalidSignatureLength");
         });
     });
 
@@ -361,17 +360,15 @@ describe("AllowanceTransferTest", function () {
         it('permit with invalid signature should revert', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, ethers.constants.AddressZero, blockTimestamp);
             const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKeyDirty, await permit2.DOMAIN_SEPARATOR());
-
-            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
+            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
     });
 
     describe('Test Set Allowance Deadline Passed', function () {
         it('permit with passed deadline should revert', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, ethers.constants.Two);
-
             const sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
-            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
+            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.revertedWithCustomError(permit2, "SignatureExpired");
         });
     });
 
@@ -457,7 +454,7 @@ describe("AllowanceTransferTest", function () {
             expect(result.amount).to.be.equal(defaultAmount);
             expect(result.expiration).to.be.equal(defaultExpiration);
 
-            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
+            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
 
@@ -472,7 +469,7 @@ describe("AllowanceTransferTest", function () {
 
             expect(result.nonce).to.be.equal(1);
 
-            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
+            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
 
@@ -494,23 +491,23 @@ describe("AllowanceTransferTest", function () {
             result = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(result.nonce).to.be.equal(ethers.BigNumber.from(33));
 
-            await expect((await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait()).to.be.reverted;
+            await expect(permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
 
     describe('Test Invalidate Nonces Invalid', function () {
-        it('Invalidate Nonces Invalid should not revert ', async function () {
-            await expect((await permit2.connect(fromDirty).invalidateNonces(token0.address, spender.address, ethers.constants.Zero)).wait()).to.be.reverted;
+        it('Invalidate Nonces Invalid should revert ', async function () {
+            await expect(permit2.connect(fromDirty).invalidateNonces(token0.address, spender.address, ethers.constants.Zero)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
     });
 
     describe('Test Excessive Invalidation', function () {
-        it('ExcessiveInvalidation should not revert', async function () {
+        it('ExcessiveInvalidation should revert', async function () {
             let permitSingle: PermitSingle = buildPermitSingle(token0.address, defaultAmount, defaultExpiration, defaultNonce, spender.address, blockTimestamp);
             let sign: Uint8Array = getPermitSignature(permitSingle, fromPrivateKey, await permit2.DOMAIN_SEPARATOR());
             let numInvalidate: BigNumberish = ethers.utils.parseUnits('65535', 0);
 
-            await expect((await permit2.connect(from).invalidateNonces(token0.address, spender.address, numInvalidate.add(ethers.constants.One))).wait()).to.be.reverted;
+            await expect(permit2.connect(from).invalidateNonces(token0.address, spender.address, numInvalidate.add(ethers.constants.One))).to.be.revertedWithCustomError(permit2, "ExcessiveInvalidation");
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
             let result = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
