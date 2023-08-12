@@ -1,4 +1,4 @@
-import {MockERC20, Permit2, SignatureVerification__factory} from "../../typechain-types";
+import {MockERC20, Permit2} from "../../typechain-types";
 import {deployContract, provider} from "./shared/zkSyncUtils";
 import {Wallet} from "zksync-web3";
 import fs from "fs";

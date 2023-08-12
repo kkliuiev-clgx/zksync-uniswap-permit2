@@ -8,15 +8,9 @@ import {
 } from "./utils/PermitSignature";
 import {deployContract, provider} from "./shared/zkSyncUtils";
 import {Wallet} from "zksync-web3";
-import {expect} from "chai";
-
-const {solidity} = require("ethereum-waffle")
-
+import {expect} from "./shared/expect";
 import {PermitHashMock} from "../../typechain-types";
 import fs from "fs";
-
-const chai = require("chai")
-chai.use(solidity)
 
 const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
 class MockWitness {
@@ -66,13 +60,13 @@ describe('TypehashGeneration', function () {
     function buildDomainSeparator(): string {
         const nameHash: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("Permit2"));
         const typeHash: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
-        const domainSeparator: string = ethers.utils.keccak256(
+
+        return ethers.utils.keccak256(
             ethers.utils.defaultAbiCoder.encode(
                 ["bytes32", "bytes32", "uint256", "address"],
                 [typeHash, nameHash, chainId, verifyingContract]
             )
         );
-        return domainSeparator;
     }
     function hashTypedWitness(typehash: string, typedWitness: MockWitness): string {
         const encodedWitness = ethers.utils.defaultAbiCoder.encode(
