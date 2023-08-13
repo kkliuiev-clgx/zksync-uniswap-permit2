@@ -1,8 +1,8 @@
-import {MockERC20, Permit2} from "../../typechain-types";
-import {deployContract, provider} from "./shared/zkSyncUtils";
-import {Wallet} from "zksync-web3";
+import { MockERC20, Permit2 } from "../../typechain-types";
+import { deployContract, provider } from "./shared/zkSyncUtils";
+import { Wallet } from "zksync-web3";
 import fs from "fs";
-import {BigNumber, BigNumberish, ethers} from "ethers";
+import { BigNumber, BigNumberish, ethers } from "ethers";
 import {
     AllowanceTransferDetails,
     buildAllowanceTransferDetails, buildPermitBatch, buildPermitDetails,
@@ -13,9 +13,9 @@ import {
     PermitSingle,
     TokenSpenderPair
 } from "./utils/PermitSignature";
-import {expect} from "./shared/expect";
+import { expect } from "./shared/expect";
 
-const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
+const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/shared/rich-wallets.json", 'utf8'));
 const DECIMAL_MULT: BigNumber = ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18));
 
 describe("AllowanceTransferTest", function () {
@@ -50,7 +50,7 @@ describe("AllowanceTransferTest", function () {
 
         from = new Wallet(fromPrivateKey, provider);
         fromDirty = new Wallet(fromPrivateKeyDirty, provider);
-        await (await from.transfer({to: fromDirty.address, amount: ethers.utils.parseEther("1.0")})).wait();
+        await (await from.transfer({ to: fromDirty.address, amount: ethers.utils.parseEther("1.0") })).wait();
 
         token0 = <MockERC20>await deployContract('MockERC20', ["Test0", "TEST0", ethers.BigNumber.from(18)]);
         token1 = <MockERC20>await deployContract('MockERC20', ["Test1", "TEST1", ethers.BigNumber.from(18)]);
@@ -195,12 +195,12 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48)[],address,uint256),bytes)"](from.address, permitBatch, sign)).wait();
 
-            let allowanceBatchResult0 =  await permit2.connect(from).allowance(from.address, token0.address, spender.address);
+            let allowanceBatchResult0 = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
             expect(allowanceBatchResult0.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult0.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult0.nonce).to.be.equal(ethers.constants.One);
 
-            let allowanceBatchResult1 =  await permit2.connect(from).allowance(from.address, token1.address, spender.address);
+            let allowanceBatchResult1 = await permit2.connect(from).allowance(from.address, token1.address, spender.address);
             expect(allowanceBatchResult1.amount).to.be.equal(defaultAmount);
             expect(allowanceBatchResult1.expiration).to.be.equal(defaultExpiration);
             expect(allowanceBatchResult1.nonce).to.be.equal(ethers.constants.One);
@@ -269,7 +269,7 @@ describe("AllowanceTransferTest", function () {
 
             await (await permit2.connect(from)["permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)"](from.address, permitSingle, sign)).wait();
 
-            let allowanceResult =  await permit2.connect(from).allowance(from.address, token0.address, spender.address);
+            let allowanceResult = await permit2.connect(from).allowance(from.address, token0.address, spender.address);
 
             expect(allowanceResult.amount).to.be.equal(defaultAmount);
 

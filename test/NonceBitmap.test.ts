@@ -1,11 +1,11 @@
-import {MockPermit2} from "../../typechain-types";
-import {deployContract, provider} from "./shared/zkSyncUtils";
+import { MockPermit2 } from "../../typechain-types";
+import { deployContract, provider } from "./shared/zkSyncUtils";
 import fs from "fs";
-import {Wallet} from "zksync-web3";
-import {BigNumber, BigNumberish, ethers} from "ethers";
-import {expect} from "./shared/expect";
+import { Wallet } from "zksync-web3";
+import { BigNumber, BigNumberish, ethers } from "ethers";
+import { expect } from "./shared/expect";
 
-const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
+const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/shared/rich-wallets.json", 'utf8'));
 
 function getRandomBigInt(): BigNumber {
     return ethers.BigNumber.from(ethers.utils.randomBytes(31)).sub(1);
@@ -107,7 +107,7 @@ describe('NonceBitmap', function () {
     });
 
     describe('Test Invalidate Nonces Randomly', function () {
-        it('should 8', async function () {
+        it('should succeed 8', async function () {
             let wordPos: BigNumberish = getRandomBigInt();
             let mask: BigNumberish = getRandomBigInt();
 
@@ -117,7 +117,7 @@ describe('NonceBitmap', function () {
     });
 
     describe('Test Invalidate Two Nonces Randomly', function () {
-        it('should 9', async function () {
+        it('should succeed 9', async function () {
             let wordPos: BigNumberish = getRandomBigInt();
             let startBitmap: BigNumberish = getRandomBigInt();
             let mask: BigNumberish = getRandomBigInt();

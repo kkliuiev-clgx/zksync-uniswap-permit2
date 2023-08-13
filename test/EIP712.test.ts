@@ -1,8 +1,8 @@
-import {expect} from "chai";
-import {ethers} from "ethers";
-import {deployContract, provider} from "./shared/zkSyncUtils";
-import {MockEIP712WithCustomChainID, Permit2} from "../../typechain-types";
-import {Wallet} from "zksync-web3";
+import { expect } from "chai";
+import { ethers } from "ethers";
+import { deployContract, provider } from "./shared/zkSyncUtils";
+import { MockEIP712WithCustomChainID, Permit2 } from "../../typechain-types";
+import { Wallet } from "zksync-web3";
 
 describe("EIP712", function () {
     const TYPE_HASH = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
@@ -14,7 +14,7 @@ describe("EIP712", function () {
 
     describe("Test Domain Separator", function () {
         beforeEach('Deploy Permit2', async () => {
-            permit2 = <Permit2> await deployContract('Permit2');
+            permit2 = <Permit2>await deployContract('Permit2');
             EIP712WithCustomChainID = await deployContract('MockEIP712WithCustomChainID') as MockEIP712WithCustomChainID;
         });
 

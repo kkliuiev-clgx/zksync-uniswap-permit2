@@ -1,9 +1,9 @@
-import {BigNumber, BigNumberish, ethers} from "ethers";
-import {MockERC20, Permit2} from "../../typechain-types";
-import {deployContract, provider} from "./shared/zkSyncUtils";
-import {Wallet} from "zksync-web3";
+import { BigNumber, BigNumberish, ethers } from "ethers";
+import { MockERC20, Permit2 } from "../../typechain-types";
+import { deployContract, provider } from "./shared/zkSyncUtils";
+import { Wallet } from "zksync-web3";
 import fs from "fs";
-import {expect} from "./shared/expect";
+import { expect } from "./shared/expect";
 import {
     getCompactPermitTransferSignature,
     getPermitBatchTransferSignature, getPermitBatchWitnessSignature,
@@ -14,7 +14,7 @@ import {
     TokenPermissions
 } from "./utils/PermitSignature";
 
-const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
+const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/shared/rich-wallets.json", 'utf8'));
 
 describe("SignatureTransferTest", function () {
     const DECIMAL_MULT: BigNumber = ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18));
@@ -117,7 +117,7 @@ describe("SignatureTransferTest", function () {
             startBalanceFrom = await token0.connect(owner).balanceOf(owner.address);
             startBalanceTo = await token0.connect(owner).balanceOf(receiver.address);
 
-            transferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            transferDetails = { to: receiver.address, requestedAmount: defaultAmount };
 
             await (await permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).wait();
 
@@ -145,7 +145,7 @@ describe("SignatureTransferTest", function () {
             let startBalanceFrom: BigNumberish = await token0.connect(owner).balanceOf(owner.address);
             let startBalanceTo: BigNumberish = await token0.connect(owner).balanceOf(receiver.address);
 
-            let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            let transferDetails: SignatureTransferDetails = { to: receiver.address, requestedAmount: defaultAmount };
 
             await (await permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sig)).wait();
 
@@ -169,7 +169,7 @@ describe("SignatureTransferTest", function () {
             let sigExtra: Uint8Array = ethers.utils.concat([sig, ethers.utils.toUtf8Bytes('123')]);
             expect(sigExtra.length).to.be.equal(68);
 
-            let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            let transferDetails: SignatureTransferDetails = { to: receiver.address, requestedAmount: defaultAmount };
 
             await expect(permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sigExtra)).to.be.revertedWithCustomError(permit2, "InvalidSignatureLength");
 
@@ -215,7 +215,7 @@ describe("SignatureTransferTest", function () {
 
             let sign: ethers.utils.BytesLike = getPermitTransferSignature(receiver.address, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-            let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            let transferDetails: SignatureTransferDetails = { to: receiver.address, requestedAmount: defaultAmount };
             await (await permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).wait();
 
             await expect(permit2.connect(owner)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
@@ -293,8 +293,8 @@ describe("SignatureTransferTest", function () {
         it('should correct work permitBatch transferFrom ', async function () {
             let permit: PermitBatchTransferFrom = {
                 permitted: [
-                    {token: token0.address, amount: defaultAmount},
-                    {token: token1.address, amount: defaultAmount}
+                    { token: token0.address, amount: defaultAmount },
+                    { token: token1.address, amount: defaultAmount }
                 ],
                 nonce: await owner.getNonce(),
                 deadline: ethers.BigNumber.from(Date.now() + 5000000)
@@ -328,8 +328,8 @@ describe("SignatureTransferTest", function () {
         it('should correct work permitBatch multi single transfer ', async function () {
             let permit: PermitBatchTransferFrom = {
                 permitted: [
-                    {token: token0.address, amount: defaultAmount},
-                    {token: token1.address, amount: defaultAmount}
+                    { token: token0.address, amount: defaultAmount },
+                    { token: token1.address, amount: defaultAmount }
                 ],
                 nonce: await owner.getNonce(),
                 deadline: ethers.BigNumber.from(Date.now() + 5000000)
@@ -341,10 +341,10 @@ describe("SignatureTransferTest", function () {
                 requestedAmount: ethers.constants.Zero,
                 to: ethers.constants.AddressZero
             },
-                {
-                    requestedAmount: defaultAmount,
-                    to: ethers.constants.AddressZero
-                }];
+            {
+                requestedAmount: defaultAmount,
+                to: ethers.constants.AddressZero
+            }];
 
             let startBalanceFrom0: BigNumberish = await token0.connect(owner).balanceOf(owner.address);
             let startBalanceFrom1: BigNumberish = await token1.connect(owner).balanceOf(owner.address);
@@ -364,8 +364,8 @@ describe("SignatureTransferTest", function () {
         it('should correct work permitBatch single recipient ', async function () {
             let permit: PermitBatchTransferFrom = {
                 permitted: [
-                    {token: token0.address, amount: defaultAmount},
-                    {token: token1.address, amount: defaultAmount}
+                    { token: token0.address, amount: defaultAmount },
+                    { token: token1.address, amount: defaultAmount }
                 ],
                 nonce: await owner.getNonce(),
                 deadline: ethers.BigNumber.from(Date.now() + 5000000)
@@ -376,7 +376,7 @@ describe("SignatureTransferTest", function () {
             let toAmountPairs: SignatureTransferDetails[] = [{
                 requestedAmount: defaultAmount,
                 to: receiver.address
-            }, {requestedAmount: defaultAmount, to: receiver.address}];
+            }, { requestedAmount: defaultAmount, to: receiver.address }];
 
             let startBalanceFrom0: BigNumberish = await token0.connect(owner).balanceOf(owner.address);
             let startBalanceFrom1: BigNumberish = await token1.connect(owner).balanceOf(owner.address);
@@ -396,8 +396,8 @@ describe("SignatureTransferTest", function () {
         it('should correct work permitBatch multi address ', async function () {
             let permit: PermitBatchTransferFrom = {
                 permitted: [
-                    {token: token0.address, amount: defaultAmount},
-                    {token: token1.address, amount: defaultAmount}
+                    { token: token0.address, amount: defaultAmount },
+                    { token: token1.address, amount: defaultAmount }
                 ],
                 nonce: await owner.getNonce(),
                 deadline: ethers.BigNumber.from(Date.now() + 5000000)
@@ -412,7 +412,7 @@ describe("SignatureTransferTest", function () {
             let toAmountPairs: SignatureTransferDetails[] = [{
                 requestedAmount: defaultAmount,
                 to: spender.address
-            }, {requestedAmount: defaultAmount, to: receiver.address}];
+            }, { requestedAmount: defaultAmount, to: receiver.address }];
 
             await (await permit2.connect(receiver)["permitTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes)"](permit, toAmountPairs, owner.address, sig)).wait();
 
@@ -429,7 +429,7 @@ describe("SignatureTransferTest", function () {
             await (await (token0.connect(owner).mint(owner.address, defaultAmount.mul(ethers.BigNumber.from(12))))).wait();
             let tokenPermissions: TokenPermissions[] = [];
             for (let i: number = 0; i < 10; i++) {
-                tokenPermissions.push({token: token0.address, amount: defaultAmount});
+                tokenPermissions.push({ token: token0.address, amount: defaultAmount });
             }
 
             let permit: PermitBatchTransferFrom = {
@@ -445,7 +445,7 @@ describe("SignatureTransferTest", function () {
 
             let toAmountPairs: SignatureTransferDetails[] = [];
             for (let i: number = 0; i < 10; i++) {
-                toAmountPairs.push({requestedAmount: defaultAmount, to: spender.address});
+                toAmountPairs.push({ requestedAmount: defaultAmount, to: spender.address });
             }
 
             await (await permit2.connect(spender)["permitTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes)"](permit, toAmountPairs, owner.address, sig)).wait();
@@ -461,7 +461,7 @@ describe("SignatureTransferTest", function () {
             let tokenPermissions: TokenPermissions[] = [];
 
             for (let i: number = 0; i < tokens.length; i++) {
-                tokenPermissions.push({token: tokens[i], amount: defaultAmount});
+                tokenPermissions.push({ token: tokens[i], amount: defaultAmount });
             }
 
             let permit: PermitBatchTransferFrom = {
@@ -471,7 +471,7 @@ describe("SignatureTransferTest", function () {
             };
 
             let sig: ethers.utils.BytesLike = getPermitBatchTransferSignature(spender.address, permit, fromPrivateKey, DOMAIN_SEPARATOR);
-            let toAmountPairs: SignatureTransferDetails[] = [{requestedAmount: defaultAmount, to: spender.address}];
+            let toAmountPairs: SignatureTransferDetails[] = [{ requestedAmount: defaultAmount, to: spender.address }];
 
             await expect(permit2.connect(owner)["permitTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes)"](permit, toAmountPairs, owner.address, sig)).to.be.revertedWithCustomError(permit2, "LengthMismatch");
         });
@@ -480,7 +480,7 @@ describe("SignatureTransferTest", function () {
     describe('Test Gas SinglePermit TransferFrom', function () {
         it('should work permitBatch ', async function () {
             let permit: PermitTransferFrom = {
-                permitted: {token: token0.address, amount: defaultAmount},
+                permitted: { token: token0.address, amount: defaultAmount },
                 nonce: await owner.getNonce(),
                 deadline: ethers.BigNumber.from(Date.now() + 5000000)
             };
@@ -490,7 +490,7 @@ describe("SignatureTransferTest", function () {
             let startBalanceFrom: BigNumberish = await token0.connect(owner).balanceOf(owner.address);
             let startBalanceTo: BigNumberish = await token0.connect(owner).balanceOf(receiver.address);
 
-            let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            let transferDetails: SignatureTransferDetails = { to: receiver.address, requestedAmount: defaultAmount };
 
             await (await permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).wait();
 
@@ -503,7 +503,7 @@ describe("SignatureTransferTest", function () {
         it('should work permitBatch transferFrom ', async function () {
             let permit: PermitBatchTransferFrom = {
                 permitted: [
-                    {token: token0.address, amount: defaultAmount}
+                    { token: token0.address, amount: defaultAmount }
                 ],
                 nonce: await owner.getNonce(),
                 deadline: ethers.BigNumber.from(Date.now() + 5000000)
@@ -511,7 +511,7 @@ describe("SignatureTransferTest", function () {
 
             let sig: ethers.utils.BytesLike = getPermitBatchTransferSignature(receiver.address, permit, fromPrivateKey, DOMAIN_SEPARATOR);
 
-            let toAmountPairs: SignatureTransferDetails[] = [{requestedAmount: defaultAmount, to: receiver.address}];
+            let toAmountPairs: SignatureTransferDetails[] = [{ requestedAmount: defaultAmount, to: receiver.address }];
 
             let startBalanceFrom0: BigNumberish = await token0.connect(owner).balanceOf(owner.address);
             let startBalanceTo0: BigNumberish = await token0.connect(owner).balanceOf(receiver.address);
@@ -529,7 +529,7 @@ describe("SignatureTransferTest", function () {
             let tokenPermissions: TokenPermissions[] = [];
 
             for (let i: number = 0; i < tokens.length; i++) {
-                tokenPermissions.push({token: tokens[i], amount: defaultAmount});
+                tokenPermissions.push({ token: tokens[i], amount: defaultAmount });
             }
 
             let permit: PermitBatchTransferFrom = {
@@ -545,7 +545,7 @@ describe("SignatureTransferTest", function () {
             let toAmountPairs: SignatureTransferDetails[] = [];
 
             for (let i: number = 0; i < to.length; i++) {
-                toAmountPairs.push({requestedAmount: defaultAmount, to: to[i]});
+                toAmountPairs.push({ requestedAmount: defaultAmount, to: to[i] });
             }
 
             let startBalanceFrom0: BigNumberish = await token0.connect(owner).balanceOf(owner.address);
@@ -577,7 +577,7 @@ describe("SignatureTransferTest", function () {
 
             let tokenPermissions: TokenPermissions[] = [];
             for (let i: number = 0; i < tokens.length; i++) {
-                tokenPermissions.push({token: tokens[i], amount: defaultAmount});
+                tokenPermissions.push({ token: tokens[i], amount: defaultAmount });
             }
 
             let permit: PermitBatchTransferFrom = {
@@ -604,7 +604,7 @@ describe("SignatureTransferTest", function () {
             let startBalanceTo1: BigNumberish = await token1.connect(owner).balanceOf(ethers.constants.AddressZero);
 
             await (await permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"]
-            (permit, toAmountPairs, owner.address, witness, WITNESS_TYPE_STRING, sig)).wait();
+                (permit, toAmountPairs, owner.address, witness, WITNESS_TYPE_STRING, sig)).wait();
 
             expect(await token0.connect(owner).balanceOf(owner.address)).to.be.equal(startBalanceFrom0.sub(defaultAmount));
             expect(await token1.connect(owner).balanceOf(owner.address)).to.be.equal(startBalanceFrom1.sub(defaultAmount));
@@ -627,7 +627,7 @@ describe("SignatureTransferTest", function () {
 
             let tokenPermissions: TokenPermissions[] = [];
             for (let i: number = 0; i < tokens.length; i++) {
-                tokenPermissions.push({token: tokens[i], amount: defaultAmount});
+                tokenPermissions.push({ token: tokens[i], amount: defaultAmount });
             }
 
             let permit: PermitBatchTransferFrom = {
@@ -642,7 +642,7 @@ describe("SignatureTransferTest", function () {
             let toAmountPairs: SignatureTransferDetails[] = [{
                 requestedAmount: defaultAmount,
                 to: to[0]
-            }, {requestedAmount: defaultAmount, to: to[1]}];
+            }, { requestedAmount: defaultAmount, to: to[1] }];
 
             await expect(permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"](permit, toAmountPairs, owner.address, witness, "fake type", sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
@@ -660,7 +660,7 @@ describe("SignatureTransferTest", function () {
             let tokens: string[] = [token0.address, token1.address];
             let tokenPermissions: TokenPermissions[] = [];
             for (let i: number = 0; i < tokens.length; i++) {
-                tokenPermissions.push({token: tokens[i], amount: defaultAmount});
+                tokenPermissions.push({ token: tokens[i], amount: defaultAmount });
             }
 
             let permit: PermitBatchTransferFrom = {
@@ -680,7 +680,7 @@ describe("SignatureTransferTest", function () {
             let toAmountPairs: SignatureTransferDetails[] = [{
                 requestedAmount: defaultAmount,
                 to: to[0]
-            }, {requestedAmount: defaultAmount, to: to[1]}];
+            }, { requestedAmount: defaultAmount, to: to[1] }];
 
             await expect(permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"](permit, toAmountPairs, owner.address, witness, WITNESS_TYPE_STRING, sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
@@ -698,7 +698,7 @@ describe("SignatureTransferTest", function () {
             let tokens: string[] = [token0.address, token1.address];
             let tokenPermissions: TokenPermissions[] = [];
             for (let i: number = 0; i < tokens.length; i++) {
-                tokenPermissions.push({token: tokens[i], amount: defaultAmount});
+                tokenPermissions.push({ token: tokens[i], amount: defaultAmount });
             }
 
             let permit: PermitBatchTransferFrom = {
@@ -715,7 +715,7 @@ describe("SignatureTransferTest", function () {
             let toAmountPairs: SignatureTransferDetails[] = [{
                 requestedAmount: defaultAmount,
                 to: to[0]
-            }, {requestedAmount: defaultAmount, to: to[1]}];
+            }, { requestedAmount: defaultAmount, to: to[1] }];
 
             await expect(permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256)[],uint256,uint256),(address,uint256)[],address,bytes32,string,bytes)"](permit, toAmountPairs, owner.address, ethers.utils.keccak256(ethers.utils.solidityPack(['bytes32'], [ethers.utils.formatBytes32String("bad witness")])), WITNESS_TYPE_STRING, sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
@@ -742,7 +742,7 @@ describe("SignatureTransferTest", function () {
             bitmap = await permit2.connect(owner).nonceBitmap(owner.address, nonce);
             expect(bitmap).to.be.equals(ethers.constants.One);
 
-            let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            let transferDetails: SignatureTransferDetails = { to: receiver.address, requestedAmount: defaultAmount };
 
             await expect(permit2.connect(receiver)["permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)"](permit, transferDetails, owner.address, sign)).to.be.revertedWithCustomError(permit2, "InvalidNonce");
         });
@@ -773,10 +773,10 @@ describe("SignatureTransferTest", function () {
             let startBalanceFrom: BigNumberish = await token0.connect(owner).balanceOf(owner.address);
             let startBalanceTo: BigNumberish = await token0.connect(owner).balanceOf(receiver.address);
 
-            let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            let transferDetails: SignatureTransferDetails = { to: receiver.address, requestedAmount: defaultAmount };
 
             await (await permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)"]
-            (permit, transferDetails, owner.address, witness, WITNESS_TYPE_STRING, sig)).wait();
+                (permit, transferDetails, owner.address, witness, WITNESS_TYPE_STRING, sig)).wait();
 
             expect(await token0.connect(owner).balanceOf(owner.address)).to.be.equal(startBalanceFrom.sub(defaultAmount));
             expect(await token0.connect(owner).balanceOf(receiver.address)).to.be.equal(startBalanceTo.add(defaultAmount));
@@ -804,7 +804,7 @@ describe("SignatureTransferTest", function () {
             let sig: ethers.utils.BytesLike = getPermitWitnessTransferSignature(receiver.address,
                 permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
             );
-            let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            let transferDetails: SignatureTransferDetails = { to: receiver.address, requestedAmount: defaultAmount };
 
             await expect(permit2.connect(receiver)["permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)"](permit, transferDetails, owner.address, witness, ethers.utils.formatBytes32String("fake typedef"), sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });
@@ -829,7 +829,7 @@ describe("SignatureTransferTest", function () {
             };
 
             let sig: ethers.utils.BytesLike = getPermitWitnessTransferSignature(receiver.address, permit, fromPrivateKey, ethers.utils.formatBytes32String("fake typehash"), witness, DOMAIN_SEPARATOR);
-            let transferDetails: SignatureTransferDetails = {to: receiver.address, requestedAmount: defaultAmount};
+            let transferDetails: SignatureTransferDetails = { to: receiver.address, requestedAmount: defaultAmount };
 
             await expect(permit2.connect(owner)["permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)"](permit, transferDetails, owner.address, witness, WITNESS_TYPE_STRING, sig)).to.be.revertedWithCustomError(permit2, "InvalidSigner");
         });

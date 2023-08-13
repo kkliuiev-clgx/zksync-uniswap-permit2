@@ -2,10 +2,10 @@ import { Provider, Contract, Wallet } from 'zksync-web3'
 import { Deployer } from '@matterlabs/hardhat-zksync-deploy'
 import * as hre from 'hardhat'
 import * as fs from 'fs'
-import {HttpNetworkConfig} from "hardhat/types";
-import {ethers} from "ethers";
+import { HttpNetworkConfig } from "hardhat/types";
+import { ethers } from "ethers";
 
-const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync(`test/zksync-tests/shared/rich-wallets.json`, 'utf8'))
+const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync(`test/shared/rich-wallets.json`, 'utf8'))
 
 export const provider = new Provider((hre.network.config as HttpNetworkConfig).url)
 
@@ -29,8 +29,8 @@ export async function deployContract(name: string, constructorArguments?: any[] 
     return await deployer.deploy(artifact, constructorArguments)
 }
 
-export async function walletDeployContract(deployerWallet:Wallet, name: string, constructorArguments?: any[] | undefined): Promise<Contract> {
-    await (await wallet.transfer({to: deployerWallet.address, amount: ethers.utils.parseEther("1.0")})).wait()
+export async function walletDeployContract(deployerWallet: Wallet, name: string, constructorArguments?: any[] | undefined): Promise<Contract> {
+    await (await wallet.transfer({ to: deployerWallet.address, amount: ethers.utils.parseEther("1.0") })).wait()
     const artifact = await loadArtifact(name)
     let customDeployer = new Deployer(hre, deployerWallet)
     return await customDeployer.deploy(artifact, constructorArguments)

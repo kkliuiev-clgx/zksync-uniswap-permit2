@@ -1,13 +1,13 @@
 import fs from "fs";
-import {Wallet} from "zksync-web3";
-import {deployContract, provider} from "./shared/zkSyncUtils";
-import {MockERC20, MockPermit2} from "../../typechain-types";
-import {BigNumber, BigNumberish, ethers} from "ethers";
-import {expect} from "./shared/expect";
+import { Wallet } from "zksync-web3";
+import { deployContract, provider } from "./shared/zkSyncUtils";
+import { MockERC20, MockPermit2 } from "../../typechain-types";
+import { BigNumber, BigNumberish, ethers } from "ethers";
+import { expect } from "./shared/expect";
 
-const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
+const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/shared/rich-wallets.json", 'utf8'));
 
-function getRandomBigInt(length:number): BigNumber {
+function getRandomBigInt(length: number): BigNumber {
     return ethers.BigNumber.from(ethers.utils.randomBytes(length)).sub(1);
 }
 describe('AllowanceUnitTest', function () {
@@ -34,7 +34,7 @@ describe('AllowanceUnitTest', function () {
             let timestamp: BigNumberish = (await provider.getBlock("latest")).timestamp;
             let timestampAfterUpdate: BigNumberish = (expiration.eq(ethers.constants.Zero)) ? timestamp : expiration;
             let allowanceResultAfter = await permit2.connect(from).allowance(from.address, token.address, spender.address);
-          
+
             expect(allowanceResultAfter.amount).to.be.equal(amount);
             expect(timestampAfterUpdate).to.be.equal(expiration);
             expect(allowanceResultAfter.nonce).to.be.equal(allowanceResult.nonce);

@@ -1,5 +1,5 @@
-import {BigNumber, ethers} from "ethers";
-import {Wallet} from "zksync-web3";
+import { BigNumber, ethers } from "ethers";
+import { Wallet } from "zksync-web3";
 import {
     MockERC20,
     MockNonPermitERC20,
@@ -8,10 +8,10 @@ import {
     Permit2,
     MockPermit2LibTest,
     MockNonPermitNonERC20WithDS, MockSafeERC20
-} from "../../typechain-types";
-import {deployContract, provider, walletDeployContract} from "./shared/zkSyncUtils";
+} from "../typechain-types";
+import { deployContract, provider, walletDeployContract } from "./shared/zkSyncUtils";
 import fs from "fs";
-import {expect} from "./shared/expect";
+import { expect } from "./shared/expect";
 import {
     buildPermitSingle,
     getPermitSignatureSeparated,
@@ -19,7 +19,7 @@ import {
     signDigestSeparate
 } from "./utils/PermitSignature";
 
-const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/zksync-tests/shared/rich-wallets.json", 'utf8'));
+const RICH_WALLET_PRIVATE_KEYS = JSON.parse(fs.readFileSync("test/shared/rich-wallets.json", 'utf8'));
 const _PERMIT_DETAILS_TYPEHASH: string = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"));
 const UINT48_MAX: BigNumber = ethers.BigNumber.from(281474976710655);
 const UINT160_MAX: BigNumber = ethers.BigNumber.from(2).pow(ethers.BigNumber.from(160)).sub(1);

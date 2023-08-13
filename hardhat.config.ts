@@ -5,11 +5,13 @@ import '@nomicfoundation/hardhat-toolbox'
 import '@matterlabs/hardhat-zksync-chai-matchers'
 import { task } from 'hardhat/config'
 import deploy from './script/deploy'
+
 task('deploy')
     .addParam('privateKey', 'Private key used to deploy')
     .setAction(async (taskArgs) => {
       await deploy(taskArgs)
     })
+
 export default {
   networks: {
     hardhat: {
