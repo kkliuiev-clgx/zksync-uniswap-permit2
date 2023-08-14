@@ -27,7 +27,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --release run
+          args: run
       
       - uses: actions/setup-node@v1
         with:
