@@ -21,12 +21,7 @@ contract MockSafeERC20 {
         SafeERC20.safePermit(ierc20, owner, spender, value, deadline, v, r, s);
     }
 
-    function safeTransferFrom(
-        address token,
-        address from,
-        address to,
-        uint256 value
-    ) external {
+    function safeTransferFrom(address token, address from, address to, uint256 value) external {
         IERC20 tokenERC20 = IERC20(token);
         SafeERC20.safeTransferFrom(tokenERC20, from, to, value);
     }
