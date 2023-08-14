@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "../libraries/PermitHash.sol";
 import {IAllowanceTransfer} from "../interfaces/IAllowanceTransfer.sol";
 import "../libraries/SignatureVerification.sol";
-import "../../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract PermitHashMock {
     using PermitHash for *;
@@ -26,7 +26,11 @@ contract PermitHashMock {
         return permit.hashWithWitness(witness, witnessTypeString);
     }
 
-    function hashPermitBatchTransferFrom(ISignatureTransfer.PermitBatchTransferFrom memory permitBatchTransferFrom) external view returns (bytes32) {
+    function hashPermitBatchTransferFrom(ISignatureTransfer.PermitBatchTransferFrom memory permitBatchTransferFrom)
+        external
+        view
+        returns (bytes32)
+    {
         return permitBatchTransferFrom.hash();
     }
 
@@ -48,8 +52,12 @@ contract PermitHashMock {
         return permitSingle.hash();
     }
 
-    function hashPermitTransferFrom(ISignatureTransfer.PermitTransferFrom memory permitTransferFrom) external view returns (bytes32) {
-        return permitTransferFrom .hash();
+    function hashPermitTransferFrom(ISignatureTransfer.PermitTransferFrom memory permitTransferFrom)
+        external
+        view
+        returns (bytes32)
+    {
+        return permitTransferFrom.hash();
     }
 
     function hashPermitBatch(IAllowanceTransfer.PermitBatch memory PermitBatch) public pure returns (bytes32) {

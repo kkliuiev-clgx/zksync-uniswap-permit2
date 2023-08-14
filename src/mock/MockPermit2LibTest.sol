@@ -1,9 +1,8 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "../mock/Permit2LibWithCustomPermit2Address.sol";
 import "../interfaces/ISignatureTransfer.sol";
-
 
 contract MockPermit2LibTest {
     function permit2(
@@ -31,14 +30,14 @@ contract MockPermit2LibTest {
         bytes32 domainSeparator; // If the call succeeded, we'll capture the return value here.
         assembly {
             success :=
-            and(
-            // Should resolve false if it returned <32 bytes or its first word is 0.
-            and(iszero(iszero(mload(0))), eq(returndatasize(), 32)),
-            // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
-            // Counterintuitively, this call must be positioned second to the and() call in the
-            // surrounding and() call or else returndatasize() will be zero during the computation.
-            staticcall(gas(), token, add(inputData, 32), mload(inputData), 0, 32)
-            )
+                and(
+                    // Should resolve false if it returned <32 bytes or its first word is 0.
+                    and(iszero(iszero(mload(0))), eq(returndatasize(), 32)),
+                    // We use 0 and 32 to copy up to 32 bytes of return data into the scratch space.
+                    // Counterintuitively, this call must be positioned second to the and() call in the
+                    // surrounding and() call or else returndatasize() will be zero during the computation.
+                    staticcall(gas(), token, add(inputData, 32), mload(inputData), 0, 32)
+                )
 
             domainSeparator := mload(0) // Copy the return value into the domainSeparator variable.
         }
