@@ -17,13 +17,13 @@ task('deploy')
 export default {
   networks: {
     zkSyncLocalhost: {
-      url: 'http://localhost:3050',
-      ethNetwork: 'http://localhost:8545',
+      url: 'http://127.0.0.1:3050',
+      ethNetwork: 'http://127.0.0.1:8545',
       zksync: true,
     },
     zkSyncTestNode: {
-      url: "http://localhost:8011",
-      ethNetwork: "http://localhost:8545",
+      url: "http://127.0.0.1:8011",
+      ethNetwork: "http://127.0.0.1:8545",
       zksync: true,
     },
     zkSyncTestnet: {
