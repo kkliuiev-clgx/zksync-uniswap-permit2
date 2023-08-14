@@ -51,7 +51,7 @@ jobs:
         
       # This is required separately from yarn test because it generates the typechain definitions
       - name: Compile
-        run: ls && yarn compile
+        run: cd .. && ls && yarn compile
 
       - name: Run tests
         run: yarn test --network zkSyncTestNode
