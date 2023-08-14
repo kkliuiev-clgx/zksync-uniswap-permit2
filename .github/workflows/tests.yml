@@ -26,12 +26,12 @@ jobs:
           sudo apt-get update && sudo apt-get install -y \
             cmake pkg-config libssl-dev clang
 
-      # - name: Build and Run Test Node
-      #   working-directory: ./era-test-node
-      #   run: |
-      #     cargo build --release
-      #     cargo run --release &
-      #     sleep 5
+      - name: Build and Run Test Node
+        working-directory: ./era-test-node
+        run: |
+          cargo build --release
+          cargo run --release &
+          sleep 5
 
       - uses: actions/setup-node@v1
         with:
@@ -52,7 +52,7 @@ jobs:
         
       # This is required separately from yarn test because it generates the typechain definitions
       - name: Compile
-        run: cd .. && ls && yarn compile
+        run: yarn compile
 
       - name: Run tests
         run: yarn test --network zkSyncTestNode
