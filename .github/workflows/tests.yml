@@ -23,12 +23,11 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y \
             cmake pkg-config libssl-dev clang
-      
-      - name: Build Test Node
-        - uses: actions-rs/cargo@v1
-          with:
-            command: build
-            args: --release
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
 
       - name: Run Test Node
         - run: nohup cargo run --release run
