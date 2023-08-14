@@ -30,7 +30,7 @@ jobs:
           args: --release
 
       - name: Run Test Node
-        - run: | 
+        run: | 
           nohup cargo run --release run
         
       - uses: actions/setup-node@v1
