@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: 'matter-labs/era-test-node'
+          ref: 'ad-dev'
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            cmake pkg-config libssl-dev clang
+      
+      - uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --release run
+
+      - name: Run tests
+        run: yarn test --network zkSyncTestNode
